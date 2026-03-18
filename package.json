@@ -38,6 +38,8 @@
     ]
   },
   "dependencies": {
+    "@aigne/aigne-hub": "^0.10.16",
+    "@aigne/core": "^1.72.0",
     "@arcblock/did-connect-storage-nedb": "^1.8.0",
     "@blocklet/sdk": "^1.17.7",
     "@ocap/client": "^1.28.3",
