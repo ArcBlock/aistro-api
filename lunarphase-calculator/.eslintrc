@@ -1,0 +1,16 @@
+{
+  "env": {
+    "browser": false,
+    "node": true,
+    "es2022": true
+  },
+  "extends": ["airbnb/base"],
+  "rules": {
+    "semi": "error",
+    "quotes": ["error", "double"],
+    "no-plusplus": "off",
+    "no-param-reassign": "warn",
+    "eol-last": "warn",
+    "linebreak-style": "warn"
+  }
+}

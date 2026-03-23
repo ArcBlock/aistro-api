@@ -39,9 +39,40 @@ requirements:
   server: ">=1.16.28"
   os: "*"
   cpu: "*"
+  aigne: true
 scripts:
   dev: npm run start
-environments: []
+  pre-start: node api/dist/hooks/pre-start.js
+environments:
+  - name: CHAIN_HOST
+    description: Chain host URL
+    required: false
+  - name: DATABASE_PASSWORD
+    description: Database password
+    required: false
+    secure: true
+  - name: REDIS_PASSWORD
+    description: Redis password
+    required: false
+    secure: true
+  - name: BILLING_ANDROID_SECRET
+    description: Android billing secret key
+    required: false
+    secure: true
+  - name: BILLING_IOS_SECRET
+    description: iOS billing secret
+    required: false
+    secure: true
+  - name: NOTIFICATION_SNS_SECRET_ACCESS_KEY
+    description: AWS SNS secret access key
+    required: false
+    secure: true
+  - name: GOOGLE_CLIENT_ID
+    description: Google OAuth client ID
+    required: false
+  - name: APPLE_CLIENT_ID
+    description: Apple Sign-In client ID
+    required: false
 capabilities: {}
 screenshots: []
 components: []
