@@ -375,6 +375,9 @@ function parsePointsConfiguration(value: object) {
         ruleId: string;
       };
     };
+    badges: {
+      [badge: string]: string;
+    };
   };
 
   const result = Joi.object<PointsConfiguration>({
@@ -391,6 +394,7 @@ function parsePointsConfiguration(value: object) {
         ruleId: Joi.string().required(),
       }),
     }).default({}),
+    badges: Joi.object({}).pattern(Joi.string(), Joi.string().allow('')).default({}),
   }).validate(value || {}, { stripUnknown: true });
 
   if (result.error) throw new Error(`Validate points configuration error: ${result.error.message}`);

@@ -10,6 +10,7 @@ import path from 'path';
 import { HttpError } from './libs/auth';
 import logger, { accessLogMiddleware } from './libs/logger';
 import routes from './routes';
+import routesV2 from './routes/v2';
 
 dotenv.config();
 
@@ -26,6 +27,7 @@ app.use(accessLogMiddleware);
 
 const router = express.Router();
 router.use('/api', routes);
+router.use('/api/v2', routesV2);
 app.use(router);
 
 const isProduction = process.env.NODE_ENV === 'production' || process.env.ABT_NODE_SERVICE_ENV === 'production';

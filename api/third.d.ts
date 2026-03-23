@@ -27,6 +27,17 @@ namespace Express {
       provider: string;
       walletOS: string;
     };
+    file?: {
+      fieldname: string;
+      originalname: string;
+      encoding: string;
+      mimetype: string;
+      size: number;
+      destination: string;
+      filename: string;
+      path: string;
+      buffer: Buffer;
+    };
   }
 }
 
@@ -39,3 +50,50 @@ interface ArrayConstructor {
 }
 
 declare module '@blocklet/logger';
+
+declare module 'node-apple-receipt-verify';
+
+declare module 'mime-types';
+
+declare module 'multer' {
+  import { Request, RequestHandler } from 'express';
+
+  interface File {
+    fieldname: string;
+    originalname: string;
+    encoding: string;
+    mimetype: string;
+    size: number;
+    destination: string;
+    filename: string;
+    path: string;
+    buffer: Buffer;
+  }
+
+  interface StorageEngine {
+    _handleFile(req: Request, file: File, cb: (error: Error | null, info?: Partial<File>) => void): void;
+    _removeFile(req: Request, file: File, cb: (error: Error | null) => void): void;
+  }
+
+  interface DiskStorageOptions {
+    destination?: string | ((req: Request, file: File, cb: (error: Error | null, destination: string) => void) => void);
+    filename?: (req: Request, file: File, cb: (error: Error | null, filename: string) => void) => void;
+  }
+
+  interface Multer {
+    single(fieldname: string): RequestHandler;
+    array(fieldname: string, maxCount?: number): RequestHandler;
+    fields(fields: Array<{ name: string; maxCount?: number }>): RequestHandler;
+    none(): RequestHandler;
+    any(): RequestHandler;
+  }
+
+  interface MulterStatic {
+    (options?: any): Multer;
+    diskStorage(options: DiskStorageOptions): StorageEngine;
+    memoryStorage(): StorageEngine;
+  }
+
+  const multer: MulterStatic;
+  export = multer;
+}
