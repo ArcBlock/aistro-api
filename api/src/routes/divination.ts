@@ -1,24 +1,20 @@
 import type { ChatModelOutput } from '@aigne/core';
 import { Router } from 'express';
 
-import createModel from '../libs/model';
+import { getModel } from '../ai/model';
 
 const router = Router();
 
 // POST /generate — structured JSON generation
 router.post('/generate', async (req, res) => {
-  const { systemPrompt, userPrompt, outputSchema, temperature, maxOutputTokens } = req.body;
+  const { systemPrompt, userPrompt, outputSchema } = req.body;
 
   if (!systemPrompt || !userPrompt || !outputSchema) {
     res.status(400).json({ error: 'Missing required fields: systemPrompt, userPrompt, outputSchema' });
     return;
   }
 
-  const model = createModel({
-    model: req.headers['x-model-name'] as string,
-    temperature,
-    maxOutputTokens,
-  });
+  const model = getModel();
 
   const schemaInstruction = `\n\nYou MUST respond with a valid JSON object that conforms to the following schema:\n${JSON.stringify(outputSchema, null, 2)}\n\nRespond ONLY with the JSON object, no other text.`;
 
@@ -43,18 +39,14 @@ router.post('/generate', async (req, res) => {
 
 // POST /chat — SSE chat (non-streaming invoke, SSE envelope for client compatibility)
 router.post('/chat', async (req, res) => {
-  const { systemPrompt, messages, temperature, maxOutputTokens } = req.body;
+  const { systemPrompt, messages } = req.body;
 
   if (!systemPrompt || !messages) {
     res.status(400).json({ error: 'Missing required fields: systemPrompt, messages' });
     return;
   }
 
-  const model = createModel({
-    model: req.headers['x-model-name'] as string,
-    temperature,
-    maxOutputTokens,
-  });
+  const model = getModel();
 
   // Map Gemini role convention to AIGNE convention
   const mappedMessages = [

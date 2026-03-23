@@ -1,9 +1,3 @@
-# Question (Chat) Agent Prompt
-
-> Source: Chat.20240820080506-jOQEau (type: prompt)
-> 用途: 通用问答 (config.templates.question)
-> 输入参数: question, language, context, $history, report, userInfo
-
 [character("appInfo")
 {
 Name("Aistro")

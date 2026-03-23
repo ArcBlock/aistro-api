@@ -42,11 +42,12 @@ requirements:
   aigne: true
 scripts:
   dev: npm run start
-  pre-start: node api/dist/hooks/pre-start.js
+  pre-start: npx tsx api/src/hooks/pre-start.ts
 environments:
   - name: CHAIN_HOST
     description: Chain host URL
     required: false
+    default: ""
   - name: DATABASE_PASSWORD
     description: Database password
     required: false

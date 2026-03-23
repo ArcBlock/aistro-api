@@ -1,14 +1,11 @@
 import { createHash } from 'crypto';
 import { pick, sampleSize } from 'lodash';
 import Queue from 'queue';
-import ReadableStreamClone from 'readable-stream-clone';
 import { CreationOptional, DataTypes, InferAttributes, InferCreationAttributes, Model, Op } from 'sequelize';
 import { Worker } from 'snowflake-uuid';
-import { Readable } from 'stream';
 
 import { sequelize } from '.';
 import { config } from '../../libs/env';
-import { streamToString } from '../../libs/stream';
 
 const idGenerator = new Worker();
 
@@ -62,8 +59,8 @@ export default class BuiltinAnswer extends Model<
   }: {
     question: string;
     language: string;
-    generate: (options: { language: string; question: string }) => Promise<Readable>;
-  }): Promise<Readable | string> {
+    generate: (options: { language: string; question: string }) => Promise<string>;
+  }): Promise<string> {
     const sha = createHash('sha256');
     sha.write(question);
     const hash = sha.digest('base64');
@@ -71,33 +68,26 @@ export default class BuiltinAnswer extends Model<
     const key = `guide-${hash}`;
 
     if (!generateQuestionTaskMap[key]) {
-      return new Promise((resolve, reject) => {
-        generateQuestionTaskMap[key] = (async () => {
-          try {
-            const answer = await this.findOne({
-              where: { key, language, content: { [Op.not]: null } },
-              order: [['id', 'DESC']],
-              limit: 1,
-            });
-            if (answer?.content) {
-              resolve(answer.content);
-              return answer.content;
-            }
-
-            const stream = await generate({ language, question });
-            const res = new ReadableStreamClone(stream);
-            resolve(res);
-
-            const content = await streamToString(stream);
-            await this.create({ key, language, question, content });
-
-            return content;
-          } catch (error) {
-            reject(error);
-            throw error;
+      generateQuestionTaskMap[key] = (async () => {
+        try {
+          const answer = await this.findOne({
+            where: { key, language, content: { [Op.not]: null } },
+            order: [['id', 'DESC']],
+            limit: 1,
+          });
+          if (answer?.content) {
+            return answer.content;
           }
-        })();
-      });
+
+          const content = await generate({ language, question });
+          await this.create({ key, language, question, content });
+
+          return content;
+        } catch (error) {
+          delete generateQuestionTaskMap[key];
+          throw error;
+        }
+      })();
     }
 
     return generateQuestionTaskMap[key]!;
@@ -113,8 +103,8 @@ export default class BuiltinAnswer extends Model<
     key: string;
     language: string;
     generate: (options: { language: string }) => Promise<{ content: string; score?: number }>;
-    translate: (options: { content: string; language: string }) => Promise<Readable>;
-    summarize: (options: { content: string; language: string }) => Promise<Readable>;
+    translate: (options: { content: string; language: string }) => Promise<string>;
+    summarize: (options: { content: string; language: string }) => Promise<string>;
   }): Promise<BuiltinAnswer & { content: string }> {
     const taskKey = `${key}-${language}`;
 
@@ -139,10 +129,10 @@ export default class BuiltinAnswer extends Model<
             }).then(async (res) => ({
               ...pick(res, 'summary', 'score'),
               originalAnswerId: res.id,
-              content: await streamToString(await translate({ content: res.content, language })),
+              content: await translate({ content: res.content, language }),
             }));
 
-      res.summary ||= await summarize({ content: res.content, language }).then((s) => streamToString(s));
+      res.summary ||= await summarize({ content: res.content, language });
 
       return res;
     };
