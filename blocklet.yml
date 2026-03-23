@@ -74,6 +74,43 @@ environments:
   - name: APPLE_CLIENT_ID
     description: Apple Sign-In client ID
     required: false
-capabilities: {}
+capabilities:
+  clusterMode: true
+  component: true
+  navigation: true
 screenshots: []
 components: []
+navigation:
+  - id: invites
+    title:
+      en: Invites
+      zh: 邀请码
+    icon: gg:user-add
+    link: /admin/invites
+    section:
+      - dashboard
+    role:
+      - admin
+      - owner
+  - id: fortune_analysis
+    title:
+      en: Fortune Analysis
+      zh: 运势报告分析
+    icon: carbon:text-link-analysis
+    link: /admin/fortune_analysis
+    section:
+      - dashboard
+    role:
+      - admin
+      - owner
+  - id: settings
+    title:
+      en: Settings
+      zh: 设置
+    icon: ic:outline-settings
+    link: /admin/settings
+    section:
+      - dashboard
+    role:
+      - admin
+      - owner

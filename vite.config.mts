@@ -7,12 +7,33 @@ import svgr from 'vite-plugin-svgr';
 // https://vitejs.dev/config/
 export default defineConfig(() => {
   return {
-    plugins: [react(), createBlockletPlugin(), svgr()],
+    plugins: [react(), createBlockletPlugin({ disableNodePolyfills: false }), svgr()],
+    optimizeDeps: {
+      exclude: ['eth-lib'],
+    },
+    resolve: {
+      dedupe: ['react', 'react-dom', '@mui/material'],
+    },
     build: {
-      // 禁止 preload 可以解决 js 的请求没有 referer 的问题
-      cssCodeSplit: false,
       commonjsOptions: {
         transformMixedEsModules: true,
+      },
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'vendor-common': [
+              'react',
+              'react-dom',
+              'react-router-dom',
+              '@mui/material',
+              '@mui/lab',
+              '@mui/icons-material',
+              'dayjs',
+              'axios',
+            ],
+            'vendor-ux': ['@arcblock/ux'],
+          },
+        },
       },
     },
   };
