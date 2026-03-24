@@ -8,7 +8,6 @@ import BuiltinAnswer, { getStaticAnswer, getStaticQuestions } from '../../../sto
 import Invite from '../../../store/models/invite';
 import Message, { MessageType } from '../../../store/models/message';
 import User from '../../../store/models/user';
-import { createReadableFromRedisStream } from '../sse';
 import { getTranslation } from '../translations';
 import { ChatHandle } from '../types';
 
@@ -27,12 +26,10 @@ export const handleLike: ChatHandle<MessageType.Like> = async ({ userId, input, 
   };
 };
 
-export const handleSuggestion: ChatHandle<MessageType.Suggestion> = async ({ input }) => {
+export const handleSuggestion: ChatHandle<MessageType.Suggestion> = async ({ language }) => {
   return {
     type: MessageType.Suggestion,
-    data: createReadableFromRedisStream(input.suggestionId, {
-      recommendsStreamKey: `${input.suggestionId.split('-')[0]}-recommends`,
-    }),
+    data: await getTranslation('error', language, 'en'),
   };
 };
 

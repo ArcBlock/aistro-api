@@ -8,6 +8,7 @@ import { UnauthorizedError } from '../../libs/auth';
 import { config } from '../../libs/env';
 import { BIRTH_DATE_SCHEMA, BIRTH_PLACE_SCHEMA, DATE_SCHEMA, HOROSCOPE_DATA_SCHEMA } from '../../libs/horoscope';
 import { getLanguage } from '../../libs/language';
+import logger from '../../libs/logger';
 import Message, { MessageRole, MessageType, nextMessageId } from '../../store/models/message';
 import User from '../../store/models/user';
 import { handleLogin } from './handlers/auth';
@@ -413,6 +414,7 @@ router.post('/chat', compression(), user(), async (req, res) => {
   };
 
   // 8. Dispatch to handler -----------------------------------------------------
+  logger.info('[chat] request', { type: input.type, stream, userId, language });
   const handler: ChatHandle<typeof input.type> = HANDLERS[input.type] as any;
   const { data, ...response } = await handler({
     stream,
@@ -509,6 +511,8 @@ router.post('/chat', compression(), user(), async (req, res) => {
       emitChunkFn(json);
     }
   }
+
+  logger.info('[chat] stream complete', { type: response.type, contentLength: content.length });
 
   if (stream) {
     res.write('[DONE]');

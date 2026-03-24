@@ -8,15 +8,14 @@ import { config } from '../../../libs/env';
 import getHoroscope, { getHoroscopeData } from '../../../libs/horoscope';
 import logger from '../../../libs/logger';
 import { addPointsBadgeWithCatch } from '../../../libs/points-badge';
-import { withRedis } from '../../../libs/redis';
 import { MessageType } from '../../../store/models/message';
 import User, { type HoroscopeStars } from '../../../store/models/user';
-import { asyncIterableToReadable, createReadableFromRedisStream, generateRecommendsOfAnswer } from '../sse';
+import { asyncIterableToReadableWithRecommendations } from '../sse';
 import { getTranslation } from '../translations';
 import type { ChatHandle } from '../types';
 import { DebugCommand } from '../types';
 
-export const handleSessionChat: ChatHandle<MessageType.SessionChat> = async ({ userId, language, input, message }) => {
+export const handleSessionChat: ChatHandle<MessageType.SessionChat> = async ({ userId, language, input }) => {
   if (!userId) {
     return {
       type: MessageType.SessionChat,
@@ -113,106 +112,35 @@ export const handleSessionChat: ChatHandle<MessageType.SessionChat> = async ({ u
     }
 
     // ----- Handle debug command -----
-    let result: Readable;
     if (input.question === DebugCommand.LongTermMem && longTermMem) {
-      result = new Readable({ read: () => {} });
+      const result = new Readable({ read: () => {} });
       const jsonString = JSON.stringify(longTermMem);
       result.push(jsonString);
       result.push(null);
-    } else {
-      // ----- Call session chat agent -----
-      const context = [userContext, friendContext, timeContext, input.context || ''].join('\n\n');
-      const history = input.history?.filter((i): i is typeof i & { content: string } => !!i.content);
-
-      const stream = await chatSession({
-        question: input.question,
-        language,
-        userInfo: userContext,
-        context,
-        history,
-      });
-
-      result = asyncIterableToReadable(stream);
+      return {
+        data: result,
+        type: MessageType.SessionChat,
+      };
     }
 
-    // ----- Redis streaming pipeline -----
-    // Clone the readable so we can pipe to Redis and also consume for recommendations
-    const chunks: string[] = [];
+    // ----- Call session chat agent -----
+    const context = [userContext, friendContext, timeContext, input.context || ''].join('\n\n');
+    const history = input.history?.filter((i): i is typeof i & { content: string } => !!i.content);
 
-    // Split AI response by \n and write into Redis
-    (async () => {
-      let index = 0;
-      let previousEnded = false;
-      let writed = false;
+    logger.info('[session-chat] invoking AI', { question: input.question.slice(0, 80), language });
 
-      const write = async ({ content, lineBreak, end }: { content?: string; lineBreak?: boolean; end?: boolean }) => {
-        const key = `${message.id}-${index}`;
-        await withRedis(async (redis) => {
-          if (content && previousEnded) {
-            await redis.xAdd(`${message.id}-${index - 1}`, '*', {
-              done: 'true',
-              next: `${message.id}-${index}`,
-            });
-            previousEnded = false;
-          }
+    const stream = await chatSession({
+      question: input.question,
+      language,
+      userInfo: userContext,
+      context,
+      history,
+    });
 
-          if (content) {
-            await redis.xAdd(key, '*', { content });
-            writed = true;
-          }
-
-          if (end) {
-            await redis.xAdd(key, '*', { done: 'true' });
-          }
-
-          if (writed && lineBreak) {
-            writed = false;
-            previousEnded = true;
-            index += 1;
-          }
-        });
-      };
-
-      for await (const chunk of result) {
-        // chunk may be a Buffer or { content: string } depending on the Readable mode
-        const content = typeof chunk === 'string' ? chunk : (chunk?.content ?? '');
-        if (content) chunks.push(content);
-
-        if (!content.includes('\n')) {
-          await write({ content });
-        } else {
-          const msgs = content.split('\n');
-          for (let i = 0; i < msgs.length; i++) {
-            await write({ content: msgs[i], lineBreak: i < msgs.length - 1 });
-          }
-        }
-      }
-      await write({ end: true });
-    })();
-
-    // Generate follow-up recommendations from the full answer
-    (async () => {
-      try {
-        // Wait a bit for chunks to accumulate, then join
-        await new Promise((resolve) => {
-          setTimeout(resolve, 500);
-        });
-        const answer = chunks.join('');
-        if (answer) {
-          const recommends = await generateRecommendsOfAnswer({ language, answer });
-          await withRedis(async (redis) => {
-            await redis.xAdd(`${message.id}-recommends`, '*', {
-              recommends: (recommends && JSON.stringify(recommends)) || '',
-            });
-          });
-        }
-      } catch (error) {
-        logger.error('generate recommends error', error);
-      }
-    })();
+    logger.info('[session-chat] AI stream created, returning readable with recommendations');
 
     return {
-      data: createReadableFromRedisStream(`${message.id}-0`, { recommendsStreamKey: `${message.id}-recommends` }),
+      data: asyncIterableToReadableWithRecommendations(stream, { language }),
       type: MessageType.SessionChat,
     };
   } catch (error) {

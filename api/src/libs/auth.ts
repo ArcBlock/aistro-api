@@ -27,7 +27,19 @@ export const wallet = new Proxy({} as ReturnType<typeof getWallet>, {
     return (getAppWallet() as any)[prop];
   },
 });
-export const client = new Client(env.chainHost);
+let _client: InstanceType<typeof Client>;
+export function getClient() {
+  if (!_client) {
+    _client = new Client(env.chainHost);
+  }
+  return _client;
+}
+/** @deprecated use getClient() instead */
+export const client = new Proxy({} as InstanceType<typeof Client>, {
+  get(_, prop) {
+    return (getClient() as any)[prop];
+  },
+});
 
 export const authenticator = new WalletAuthenticator();
 export const handlers = new WalletHandler({

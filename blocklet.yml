@@ -52,10 +52,6 @@ environments:
     description: Database password
     required: false
     secure: true
-  - name: REDIS_PASSWORD
-    description: Redis password
-    required: false
-    secure: true
   - name: BILLING_ANDROID_SECRET
     description: Android billing secret key
     required: false

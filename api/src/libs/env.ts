@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync } from 'fs';
 import Joi from 'joi';
 import path from 'path';
 
+import { defaultNatalReportTemplate, defaultPredictReportTemplate } from './default-report-templates';
 import logger from './logger';
 
 export const { TEST_IOS_PURCHASE_RECEIPT } = process.env;
@@ -109,28 +110,6 @@ function parseDatabaseConfiguration(value: object) {
   }).validate(value, { stripUnknown: true });
 
   if (result.error) throw new Error(`validate database configuration error ${result.error.message}`);
-
-  return result.value;
-}
-
-function parseRedisConfiguration(value: object) {
-  const result = Joi.object<{
-    url?: string;
-    pool?: {
-      max?: number;
-      min?: number;
-    };
-  }>({
-    url: Joi.string().empty([null, '']),
-    pool: Joi.object({
-      max: Joi.number().integer().min(1).empty([null, '']),
-      min: Joi.number().integer().min(0).empty([null, '']),
-    }),
-  })
-    .required()
-    .validate(value, { stripUnknown: true });
-
-  if (result.error) throw new Error(`validate redis configuration error ${result.error.message}`);
 
   return result.value;
 }
@@ -473,20 +452,6 @@ function parseConfigFromPreferences() {
       return this._database;
     },
 
-    _redis: undefined as ReturnType<typeof parseRedisConfiguration> | undefined,
-    get redis() {
-      const old = tryParse(process.env.REDIS);
-
-      this._redis ??= parseRedisConfiguration({
-        url: preferences.redis_url?.replaceAll('$password$', process.env.REDIS_PASSWORD || '') || old?.url,
-        pool: {
-          min: preferences.redis_pool_min || old?.pool?.min,
-          max: preferences.redis_pool_max || old?.pool?.max,
-        },
-      });
-      return this._redis;
-    },
-
     avatars: {
       _pool: undefined as string[] | undefined,
       get pool() {
@@ -509,7 +474,9 @@ function parseConfigFromPreferences() {
         this._predictReportTemplate =
           (configFile.config?.predictReportTemplate &&
             parseReportTemplateConfiguration(configFile.config?.predictReportTemplate)) ||
-          parseReportTemplateConfiguration(preferences.predictReportTemplate);
+          (preferences.predictReportTemplate
+            ? parseReportTemplateConfiguration(preferences.predictReportTemplate)
+            : parseReportTemplateConfiguration(defaultPredictReportTemplate));
       }
       return this._predictReportTemplate;
     },
@@ -520,29 +487,27 @@ function parseConfigFromPreferences() {
         return (this._natalReportTemplate =
           (configFile.config?.natalReportTemplate &&
             parseReportTemplateConfiguration(configFile.config?.natalReportTemplate)) ||
-          parseReportTemplateConfiguration(preferences.natalReportTemplate));
+          (preferences.natalReportTemplate
+            ? parseReportTemplateConfiguration(preferences.natalReportTemplate)
+            : parseReportTemplateConfiguration(defaultNatalReportTemplate)));
       }
       return this._natalReportTemplate;
     },
 
-    _synastryReportTemplate: undefined as ReturnType<typeof parseReportTemplateConfiguration> | undefined,
+    _synastryReportTemplate: undefined as ReturnType<typeof parseReportTemplateConfiguration> | undefined | null,
     get synastryReportTemplate() {
-      if (!this._synastryReportTemplate) {
-        return (this._synastryReportTemplate =
-          (configFile.config?.synastryReportTemplate &&
-            parseReportTemplateConfiguration(configFile.config?.synastryReportTemplate)) ||
-          parseReportTemplateConfiguration(preferences.synastryReportTemplate));
+      if (this._synastryReportTemplate === undefined) {
+        const source = configFile.config?.synastryReportTemplate || preferences.synastryReportTemplate;
+        this._synastryReportTemplate = source ? parseReportTemplateConfiguration(source) : null;
       }
       return this._synastryReportTemplate;
     },
 
-    _phaseReportTemplate: undefined as ReturnType<typeof parseReportTemplateConfiguration> | undefined,
+    _phaseReportTemplate: undefined as ReturnType<typeof parseReportTemplateConfiguration> | undefined | null,
     get phaseReportTemplate() {
-      if (!this._phaseReportTemplate) {
-        return (this._phaseReportTemplate =
-          (configFile.config?.phaseReportTemplate &&
-            parseReportTemplateConfiguration(configFile.config?.phaseReportTemplate)) ||
-          parseReportTemplateConfiguration(preferences.phaseReportTemplate));
+      if (this._phaseReportTemplate === undefined) {
+        const source = configFile.config?.phaseReportTemplate || preferences.phaseReportTemplate;
+        this._phaseReportTemplate = source ? parseReportTemplateConfiguration(source) : null;
       }
       return this._phaseReportTemplate;
     },

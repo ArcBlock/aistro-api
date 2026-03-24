@@ -4,7 +4,6 @@ import { Readable } from 'stream';
 import { suggestQuestions } from '../../ai/utils';
 import { config } from '../../libs/env';
 import logger from '../../libs/logger';
-import { xRead } from '../../libs/redis';
 import { MessageType } from '../../store/models/message';
 
 // ---------------------------------------------------------------------------
@@ -58,7 +57,6 @@ export function asyncIterableToReadable(source: AsyncIterable<string>): Readable
         try {
           for await (const text of source) {
             if (!this.push({ content: text })) {
-              // back-pressure — wait until _read is called again
               await new Promise<void>((resolve) => {
                 this.once('drain', resolve);
               });
@@ -74,66 +72,60 @@ export function asyncIterableToReadable(source: AsyncIterable<string>): Readable
 }
 
 // ---------------------------------------------------------------------------
-// createReadableFromRedisStream — reads from Redis streams using xRead
+// asyncIterableToReadableWithRecommendations — wraps AsyncIterable<string>
+// into an object-mode Readable, then appends contentEnd and recommendation
+// suggestions after the stream finishes.
 // ---------------------------------------------------------------------------
 
-export function createReadableFromRedisStream(
-  key: string,
-  { recommendsStreamKey }: { recommendsStreamKey?: string } = {},
-) {
-  const readable = new Readable({ read: () => {}, objectMode: true });
+export function asyncIterableToReadableWithRecommendations(
+  source: AsyncIterable<string>,
+  { language }: { language: string },
+): Readable {
+  let started = false;
 
-  (async () => {
-    try {
-      let id = '0-0';
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        const res = await xRead({ key, id }, { BLOCK: 60000 });
-        if (!res) break;
-        for (const i of (res as any[]).flatMap((i: any) => i.messages)) {
-          if (readable.closed) return;
+  return new Readable({
+    objectMode: true,
+    read() {
+      if (started) return;
+      started = true;
 
-          const { content, done, next } = i.message;
+      (async () => {
+        const chunks: string[] = [];
+        try {
+          for await (const text of source) {
+            this.push({ content: text });
+            chunks.push(text);
+          }
+        } catch (error) {
+          logger.error('asyncIterableToReadableWithRecommendations stream error', error);
+        }
 
-          if (content) readable.push({ content });
+        logger.info('[sse] stream ended', { chunksCount: chunks.length, totalLength: chunks.join('').length });
+        this.push({ sseDirective: { contentEnd: true } });
 
-          if (done === 'true') {
-            readable.push({ sseDirective: { contentEnd: true } });
-
-            if (next) {
-              readable.push({ sseDirective: { next: { type: MessageType.Suggestion, suggestionId: next } } });
-            } else if (recommendsStreamKey) {
-              const res = await xRead({ key: recommendsStreamKey, id: '0-0' }, { COUNT: 1, BLOCK: 30000 });
-              const msg = (res as any[])?.flatMap((i: any) => i.messages)[0]?.message.recommends;
-              if (msg) {
-                const recommends = JSON.parse(msg);
-                if (Array.isArray(recommends)) {
-                  const suggestions = recommends
-                    .map((question) =>
-                      typeof question === 'string' && question
-                        ? ({ type: MessageType.SessionChat, question } as const)
-                        : undefined,
-                    )
-                    .filter((i): i is NonNullable<typeof i> => !!i);
-
-                  readable.push({ sseDirective: { suggestions } });
-                }
+        try {
+          const answer = chunks.join('');
+          if (answer) {
+            logger.info('[sse] generating recommendations...');
+            const recommends = await generateRecommendsOfAnswer({ language, answer });
+            if (recommends && recommends.length > 0) {
+              const suggestions = recommends
+                .filter((q): q is string => typeof q === 'string' && !!q)
+                .map((question) => ({ type: MessageType.SessionChat, question }) as const);
+              if (suggestions.length > 0) {
+                logger.info('[sse] sending recommendations', { count: suggestions.length });
+                this.push({ sseDirective: { suggestions } });
               }
             }
-            readable.push(null);
-            return;
           }
-
-          id = i.id;
+        } catch (error) {
+          logger.error('Failed to generate recommendations inline', error);
         }
-      }
-    } catch (error) {
-      logger.error('read message from redis error', error);
-    }
-    if (!readable.closed) readable.push(null);
-  })();
 
-  return readable;
+        this.push(null);
+      })();
+    },
+  });
 }
 
 // ---------------------------------------------------------------------------
