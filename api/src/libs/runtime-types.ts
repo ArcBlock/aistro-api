@@ -16,7 +16,4 @@ export type RuntimeResult = {
     original: string;
     translation: string;
   };
-  blender?: {
-    sn: number;
-  };
 };

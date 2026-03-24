@@ -63,7 +63,8 @@ function FortuneForm() {
   const { type } = useParams();
   const [, setBirthData] = useLocalStorageState<any | undefined>('fortune-data');
   const [reportId, setReportId] = useLocalStorageState<string | undefined>(`fortune-reportId-${type}`);
-  const searchBoxCore = useSearchBoxCore({ accessToken: import.meta.env.VITE_MAPBOX_TOKEN || '' });
+  const token = import.meta.env.VITE_MAPBOX_TOKEN || '';
+  const searchBoxCore = useSearchBoxCore({ accessToken: token });
   const { t, locale } = useLocaleContext();
   const [birthDate, setBirthDate] = useState('');
   const [birthTime, setBirthTime] = useState(dayjs(''));

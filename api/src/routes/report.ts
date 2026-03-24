@@ -14,7 +14,6 @@ import { invokeText } from '../ai/invoke';
 import { summarize, translate } from '../ai/utils';
 import { verifyPurchaseOfReport } from '../libs/app-receipt';
 import { authService } from '../libs/auth';
-import { randomBlenderImage } from '../libs/blender';
 import { componentIds } from '../libs/constants';
 import env, { Runtime, config } from '../libs/env';
 import { ErrorCodes } from '../libs/error';
@@ -23,7 +22,6 @@ import getHoroscope, {
   BIRTH_PLACE_SCHEMA,
   DATE_SCHEMA,
   HOROSCOPE_DATA_SCHEMA,
-  PredictTopics,
   Stars,
   getHoroscopeData,
   getHoroscopeRetrogradeStars,
@@ -945,9 +943,6 @@ export type RuntimeResult = {
     original: string;
     translation: string;
   };
-  blender?: {
-    sn: number;
-  };
 };
 
 async function runRuntime({
@@ -1077,15 +1072,6 @@ async function runRuntime({
           };
         }
 
-        if (field.blender) {
-          return {
-            field: field.field,
-            blender: {
-              sn: randomInt(1, config.maxBlenderSN),
-            },
-          };
-        }
-
         throw new Error(`Unsupported field: ${field.field}`);
       }),
     )
@@ -1152,33 +1138,6 @@ export async function mergeResult(
         } else if (f.translate) {
           const translation = await getTranslation(f.translate, language, config.defaultLanguage);
           set(obj, [f.field], translation);
-        } else if (f.blender) {
-          const sn = result.find((i) => !!i.blender && i.field === f.field)?.blender?.sn;
-          const blender = (isVip && f.blender.vip) || f.blender;
-          if (sn) {
-            const getBlender = (template: string) =>
-              get(
-                context,
-                template.replace(/\[[^\]]+\]/g, (i) => {
-                  let v = get(context, i.slice(1, -1));
-                  // NOTE: 默认运势维度使用全小写字母
-                  if (typeof v === 'string' && PredictTopics.includes(v.toLowerCase() as any)) {
-                    v = v.toLowerCase();
-                  }
-                  return `[${JSON.stringify(v)}]`;
-                }),
-              );
-
-            const tpl = getBlender(blender.template) || (blender.default && getBlender(blender.default));
-
-            if (tpl && typeof tpl.templateId === 'string' && typeof tpl.count === 'number') {
-              set(
-                obj,
-                [f.field],
-                randomBlenderImage({ templateId: tpl.templateId, count: tpl.count, sn: sn % tpl.count }),
-              );
-            }
-          }
         }
       } finally {
         logger.debug('report time usage, mergeResult: after field', {
@@ -1491,7 +1450,7 @@ async function generateDetailIfNeeded({
   template,
   language,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  sendNotification,
+  sendNotification: _sendNotification,
 }: {
   report: Report;
   reportDetail: ReportDetail;

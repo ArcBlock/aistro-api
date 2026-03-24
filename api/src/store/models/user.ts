@@ -8,12 +8,6 @@ import env, { configFile } from '../../libs/env';
 import getHoroscope, { Sign, Star, getHoroscopeData } from '../../libs/horoscope';
 import Message, { MessageRole, MessageType } from './message';
 
-// TODO: Phase 4 - migrate blender.ts and restore replacePredictImageByVip import
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function replacePredictImageByVip(image: string | undefined, _topic: string, _isVip: boolean): string | undefined {
-  return image;
-}
-
 export const DEFAULT_PREDICT_TOPICS: NonNullable<User['predictTopics']> = [
   { topic: 'LOVE', visible: true },
   { topic: 'CREATIVITY', visible: true },
@@ -180,7 +174,7 @@ export default class User extends Model<InferAttributes<User>, InferCreationAttr
       avatar: getAvatarUrl(walletUser.avatar),
       predictTopics: user.predictTopics.map((i) => ({
         ...i,
-        image: replacePredictImageByVip(i.image, i.topic, !!isSub),
+        image: i.image,
       })),
       isVip: !!isSub,
     };

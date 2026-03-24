@@ -1,76 +1,39 @@
-import { getComponentMountPoint } from '@blocklet/sdk/lib/component';
-import { randomInt } from 'crypto';
+/**
+ * Image functions for report illustrations.
+ *
+ * Replaces the old nft-blender URL construction with AI-generated image cache lookups.
+ * Function signatures are kept backward-compatible: isVip and sn parameters are accepted
+ * but ignored (VIP image differentiation is removed; AI images are always high quality).
+ */
 
-import env, { config } from './env';
-import { Sign, Star } from './horoscope';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import type { Sign, Star } from './horoscope';
+import { getImage } from './image-cache';
 
-export function randomFortuneImage(type: string) {
-  const { blender } = config;
-
-  const imageTemplate = blender.fortune?.types?.[type];
-
-  return imageTemplate && randomBlenderImage({ ...imageTemplate });
+export function randomFortuneImage(type: string): string | undefined {
+  return getImage(`fortune-${type}`);
 }
 
-export function randomNatalImage(isVip: boolean, sign: Sign, sn?: string) {
-  const { blender } = config;
-
-  const imageTemplate = (isVip && blender.vip?.natal?.signs?.[sign]) || blender.natal?.signs?.[sign];
-
-  return imageTemplate && randomBlenderImage({ ...imageTemplate, sn });
+export function randomNatalImage(_isVip: boolean, sign: Sign, _sn?: string): string | undefined {
+  return getImage(`natal-${sign}`);
 }
 
-export function randomSynastryImage(isVip: boolean, star: Star, sn?: string) {
-  const { blender } = config;
-
-  const imageTemplate = (isVip && blender.vip?.synastry?.stars?.[star]) || blender.synastry?.stars?.[star];
-
-  return imageTemplate && randomBlenderImage({ ...imageTemplate, sn });
+export function randomSynastryImage(_isVip: boolean, star: Star, _sn?: string): string | undefined {
+  return getImage(`synastry-${star}`);
 }
 
-export function randomPredictImage(isVip: boolean, dimension: string, sn?: string) {
-  const topic = dimension.toLowerCase();
-
-  const { blender } = config;
-
-  const imageTemplate =
-    (isVip && (blender.vip?.predict?.dimensions?.[topic] || blender.vip?.predict?.default)) ||
-    blender?.predict?.dimensions?.[topic] ||
-    blender?.predict?.default;
-
-  return imageTemplate && randomBlenderImage({ ...imageTemplate, sn });
+export function randomPredictImage(_isVip: boolean, dimension: string, _sn?: string): string | undefined {
+  return getImage(`predict-${dimension.toLowerCase()}`);
 }
 
-export function replacePredictImageByVip(image: string | undefined, topic: string, isVip: boolean) {
-  const sn = image?.match(/sn=(?<sn>\d+)/)?.groups?.sn;
-  if (!sn) return image;
-  return randomPredictImage(isVip, topic, sn);
+export function replacePredictImageByVip(
+  image: string | undefined,
+  _topic: string,
+  _isVip: boolean,
+): string | undefined {
+  return image;
 }
 
-export function randomBackgroundImage(isVip: boolean, sn?: string) {
-  const { blender } = config;
-
-  const imageTemplate = (isVip && blender.vip?.background) || blender.background;
-
-  return imageTemplate && randomBlenderImage({ ...imageTemplate, sn });
-}
-
-export function randomBlenderImage({
-  templateId,
-  count,
-  sn,
-}: {
-  templateId: string;
-  count: number;
-  sn?: number | string;
-}) {
-  const blender = getComponentMountPoint('nft-blender');
-
-  let s = sn;
-  if (typeof s !== 'number' && !s) {
-    if (!blender || !count || !templateId) return undefined;
-    s = sn ?? randomInt(1, count + 1);
-  }
-
-  return `${env.appUrl}${blender}/api/templates/cache-preview/${templateId}.png?sn=${s}&imageFilter=resize&w=750&f=webp`;
+export function randomBackgroundImage(_isVip?: boolean, _sn?: string): string | undefined {
+  return getImage('background');
 }

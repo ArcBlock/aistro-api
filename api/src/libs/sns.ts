@@ -17,7 +17,7 @@ export enum NotificationType {
 export async function createOrUpdatePlatformEndpoint({
   platform,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  token,
+  token: _token,
   userId,
 }: {
   platform: 'ios' | 'ios-sandbox' | 'android';
@@ -51,11 +51,11 @@ export async function unsubscribeTopic({ subscriptionArn }: { subscriptionArn: s
 
 export async function sendNotification({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  reason,
+  reason: _reason,
   topicArn,
   targetArn,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  message,
+  message: _message,
 }: {
   reason?: string;
   topicArn?: string;

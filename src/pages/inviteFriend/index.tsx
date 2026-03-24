@@ -145,7 +145,8 @@ function InviteFriendContainer({ children }: { children: ReactNode }) {
 }
 
 function InviteFriend() {
-  const searchBoxCore = useSearchBoxCore({ accessToken: import.meta.env.VITE_MAPBOX_TOKEN || '' });
+  const token = import.meta.env.VITE_MAPBOX_TOKEN || '';
+  const searchBoxCore = useSearchBoxCore({ accessToken: token });
   const { t, locale } = useLocaleContext();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

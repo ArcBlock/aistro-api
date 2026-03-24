@@ -3,7 +3,6 @@ import { Router } from 'express';
 import Joi from 'joi';
 import { omit, pick } from 'lodash';
 
-import { randomNatalImage, randomPredictImage, randomSynastryImage } from '../libs/blender';
 import { getLanguage } from '../libs/language';
 import logger from '../libs/logger';
 import Billing from '../store/models/billing';
@@ -108,30 +107,11 @@ router.get('/:messageId', async (req, res) => {
   });
 });
 
-const imageGeneratorMap: {
-  [key: number]: (isVip: boolean, detail: Report['details'][number], sn: string) => string | undefined;
-} = {
-  [MessageType.NatalReport]: (isVip, detail, sn) => randomNatalImage(isVip, detail.sign!, sn),
-  [MessageType.FriendNatalReport]: (isVip, detail, sn) => randomNatalImage(isVip, detail.sign!, sn),
-  [MessageType.SynastryReport]: (isVip, detail, sn) => randomSynastryImage(isVip, detail.star!, sn),
-  [MessageType.TodaysPredict]: (isVip, detail, sn) => randomPredictImage(isVip, detail.dimension!, sn),
-};
-
 function processReportByVipStatus(type: Message['type'], report: Report, isVip: boolean): typeof report {
   if (!report) return report;
 
   const result: Report = { ...report };
   if (!isVip) result.details = result.details.slice(0, reportPartN(type));
-
-  if (isVip) {
-    const random = imageGeneratorMap[type];
-    if (random) {
-      for (const i of result.details) {
-        const sn = i.image?.match(/sn=(?<sn>\d+)/)?.groups?.sn;
-        if (sn) i.image = random(isVip, i, sn);
-      }
-    }
-  }
 
   return result;
 }

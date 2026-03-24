@@ -4,94 +4,11 @@ import { readFileSync, writeFileSync } from 'fs';
 import Joi from 'joi';
 import path from 'path';
 
-import { FortuneTypes, PredictTopics, Sign, Signs, Star, Stars } from './horoscope';
 import logger from './logger';
 
 export const { TEST_IOS_PURCHASE_RECEIPT } = process.env;
 
 export const isDevelopment = Config.env.mode === 'development';
-
-export type BlenderConfiguration = {
-  natal?: {
-    signs?: { [key in Sign]?: { templateId: string; count: number } };
-  };
-  synastry?: {
-    stars?: { [key in Star]?: { templateId: string; count: number } };
-  };
-  predict?: {
-    dimensions?: { [key in string]?: { templateId: string; count: number } };
-    default?: { templateId: string; count: number };
-  };
-  fortune?: { types?: { [key in string]?: { templateId: string; count: number } } };
-  background?: { templateId: string; count: number };
-  vip?: Partial<Omit<BlenderConfiguration, 'vip'>>;
-};
-
-const reportImageConfigWithoutVipSchema = Joi.object<Omit<BlenderConfiguration, 'vip'>>({
-  natal: Joi.object({
-    signs: Joi.object().pattern(
-      Joi.string().valid(...Signs),
-      Joi.object({
-        templateId: Joi.string().required(),
-        count: Joi.number().integer().min(1).required(),
-      }),
-    ),
-  }),
-  synastry: Joi.object({
-    stars: Joi.object().pattern(
-      Joi.string().valid(...Stars),
-      Joi.object({
-        templateId: Joi.string().required(),
-        count: Joi.number().integer().min(1).required(),
-      }),
-    ),
-  }),
-  predict: Joi.object({
-    dimensions: Joi.object().pattern(
-      Joi.string().valid(...PredictTopics),
-      Joi.object({
-        templateId: Joi.string().required(),
-        count: Joi.number().integer().min(1).required(),
-      }),
-    ),
-    default: Joi.object({
-      templateId: Joi.string().required(),
-      count: Joi.number().integer().min(1).required(),
-    }),
-  }),
-  fortune: Joi.object({
-    types: Joi.object().pattern(
-      Joi.string().valid(...FortuneTypes),
-      Joi.object({
-        templateId: Joi.string().required(),
-        count: Joi.number().integer().min(1).required(),
-      }),
-    ),
-  }),
-  background: Joi.object({
-    templateId: Joi.string().required(),
-    count: Joi.number().integer().min(1).required(),
-  }),
-}).rename('todayFortune', 'predict', { ignoreUndefined: true });
-
-const blenderConfigurationSchema = Joi.object<BlenderConfiguration>({
-  natal: reportImageConfigWithoutVipSchema.extract('natal'),
-  synastry: reportImageConfigWithoutVipSchema.extract('synastry'),
-  predict: reportImageConfigWithoutVipSchema.extract('predict'),
-  background: reportImageConfigWithoutVipSchema.extract('background'),
-  fortune: reportImageConfigWithoutVipSchema.extract('fortune'),
-  vip: reportImageConfigWithoutVipSchema,
-}).rename('todayFortune', 'predict', { ignoreUndefined: true });
-
-function parseBlenderConfiguration(value: object) {
-  const result = blenderConfigurationSchema.validate(value, {
-    stripUnknown: true,
-  });
-
-  if (result.error) throw new Error(`validate blender configuration error ${result.error.message}`);
-
-  return result.value;
-}
 
 function parseBillingConfiguration(value: object) {
   const result = Joi.object<{
@@ -276,14 +193,6 @@ export type Runtime = {
       fields: Runtime['fields'];
     };
     translate?: string;
-    blender?: {
-      template: string;
-      default?: string;
-      vip?: {
-        template: string;
-        default?: string;
-      };
-    };
   }[];
 };
 
@@ -303,15 +212,7 @@ const runtimeSchema = Joi.object<Runtime>({
         fields: Joi.link('#runtime.fields'),
       }),
       translate: Joi.string().empty([null, '']),
-      blender: Joi.object({
-        template: Joi.string().required(),
-        default: Joi.string().empty([null, '']),
-        vip: Joi.object({
-          template: Joi.string().required(),
-          default: Joi.string().empty([null, '']),
-        }),
-      }),
-    }).oxor('ai', 'variable', 'map', 'translate', 'blender'),
+    }).oxor('ai', 'variable', 'map', 'translate'),
   ),
 }).id('runtime');
 
@@ -447,12 +348,6 @@ function parseConfigFromPreferences() {
           return this._clientId;
         },
       },
-    },
-
-    _blender: undefined as ReturnType<typeof parseBlenderConfiguration> | undefined,
-    get blender() {
-      this._blender ??= parseBlenderConfiguration(preferences.blender || tryParse(process.env.REPORT_IMAGE));
-      return this._blender;
     },
 
     _billing: undefined as ReturnType<typeof parseBillingConfiguration> | undefined,
@@ -657,8 +552,6 @@ function parseConfigFromPreferences() {
     publicNatalTopics: ['sun', 'ascendant'],
 
     publicSynastryTopics: ['sun', 'moon'],
-
-    maxBlenderSN: 10000,
 
     _points: undefined as ReturnType<typeof parsePointsConfiguration> | undefined,
     get points() {

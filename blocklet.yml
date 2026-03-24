@@ -68,6 +68,9 @@ environments:
     description: AWS SNS secret access key
     required: false
     secure: true
+  - name: AI_IMAGE_MODEL
+    description: AI image generation model (e.g., openai/gpt-image-1)
+    required: false
   - name: GOOGLE_CLIENT_ID
     description: Google OAuth client ID
     required: false
