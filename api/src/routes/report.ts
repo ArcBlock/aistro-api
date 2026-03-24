@@ -14,6 +14,7 @@ import { invokeText } from '../ai/invoke';
 import { summarize, translate } from '../ai/utils';
 import { verifyPurchaseOfReport } from '../libs/app-receipt';
 import { authService } from '../libs/auth';
+import { randomNatalImage, randomPredictImage, randomSynastryImage } from '../libs/blender';
 import { componentIds } from '../libs/constants';
 import env, { Runtime, config } from '../libs/env';
 import { ErrorCodes } from '../libs/error';
@@ -568,6 +569,7 @@ const getReportDetailQuerySchema = Joi.object<{ language?: string }>({
 
 router.get('/details/:reportDetailId', user(), async (req, res) => {
   const { reportDetailId } = req.params;
+  logger.info('[report-details] request', { reportDetailId, userId: req.user?.did, query: req.query });
   if (!reportDetailId) throw new Error('Missing required params `reportDetailId`');
 
   const query = await getReportDetailQuerySchema.validateAsync(req.query, {
@@ -609,6 +611,16 @@ router.get('/details/:reportDetailId', user(), async (req, res) => {
     reportDetail,
     user: report.meta.user,
     secondaryUser: report.meta.type === 'synastry' ? report.meta.secondaryUser : undefined,
+  });
+
+  logger.info('[report-details] loaded', {
+    reportDetailId,
+    reportId: report.id,
+    reportType: report.type,
+    topic: reportDetail.meta.topic,
+    generateStatus: reportDetail.generateStatus,
+    isVip,
+    lock,
   });
 
   if (!lock) {
@@ -674,6 +686,12 @@ router.get('/details/:reportDetailId', user(), async (req, res) => {
     reportDetail.data?._runtime?.fields ?? [],
     isVip,
   );
+
+  logger.info('[report-details] responding', {
+    reportDetailId,
+    generateStatus: reportDetail.generateStatus,
+    sectionsCount: template._details_?.sections?.length ?? 0,
+  });
 
   res.json(
     merge(
@@ -1218,6 +1236,12 @@ class Context {
     return {
       ...$item,
       sign,
+      get image() {
+        if (report.type === 'predict') return randomPredictImage(false, $item?.topic);
+        if (report.type === 'natal') return randomNatalImage(false, sign);
+        if (report.type === 'synastry') return randomSynastryImage(false, $item?.topic);
+        return undefined;
+      },
     };
   }
 
@@ -1323,6 +1347,13 @@ class Context {
       ...reportDetail.dataValues,
       get sign() {
         return report.meta.user.horoscope.stars.find((s: any) => s.star === reportDetail.meta.topic)?.sign;
+      },
+      get image() {
+        const sign = report.meta.user.horoscope.stars.find((s: any) => s.star === reportDetail.meta.topic)?.sign;
+        if (report.type === 'predict') return randomPredictImage(false, reportDetail.meta.topic);
+        if (report.type === 'natal') return randomNatalImage(false, sign);
+        if (report.type === 'synastry') return randomSynastryImage(false, reportDetail.meta.topic);
+        return undefined;
       },
       get icon() {
         if (reportDetail.meta.type === 'predict') {

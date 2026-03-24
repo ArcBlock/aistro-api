@@ -4,7 +4,7 @@ export const defaultPredictReportTemplate = {
       {
         field: 'title',
         ai: {
-          template: '20231102124329-m3BSHg',
+          template: 'report/predict-title',
           parameters: [
             { field: 'date', variable: 'report.meta.date' },
             { field: 'dateType', variable: 'report.meta.dateType' },
@@ -17,7 +17,7 @@ export const defaultPredictReportTemplate = {
       {
         field: 'summary',
         ai: {
-          template: '20231102124453-VhDVWq',
+          template: 'report/predict-summary',
           parameters: [
             { field: 'date', variable: 'report.date' },
             { field: 'dateType', variable: 'report.dateType' },
@@ -34,23 +34,13 @@ export const defaultPredictReportTemplate = {
           iterator: 'report.sections',
           fields: [
             { field: 'icon', variable: '$item.icon' },
-            {
-              field: 'image',
-              blender: {
-                template: 'icons.blender[$item.topic]',
-                default: 'icons.blender.predictDefault',
-                vip: {
-                  template: 'icons.blender.vip[$item.topic]',
-                  default: 'icons.blender.predictDefault',
-                },
-              },
-            },
+            { field: 'image', variable: '$item.image' },
             { field: 'title', variable: '$item.title' },
             { field: 'topic', variable: '$item.topic' },
             {
               field: 'content',
               ai: {
-                template: '20231102124538-PNxeoR',
+                template: 'report/predict-overview',
                 parameters: [
                   { field: 'topic', variable: '$item.topic' },
                   { field: 'date', variable: 'report.meta.date' },
@@ -91,7 +81,7 @@ export const defaultPredictReportTemplate = {
             {
               field: 'content',
               ai: {
-                template: '20231102124538-PNxeoR',
+                template: 'report/predict-overview',
                 parameters: [
                   { field: 'dateType', variable: 'report.meta.dateType' },
                   { field: 'topic', variable: 'reportDetail.title' },
@@ -116,19 +106,7 @@ export const defaultPredictReportTemplate = {
         contentColor: '',
         titleColor: '',
         _runtime: {
-          fields: [
-            {
-              field: 'image',
-              blender: {
-                template: 'icons.blender[reportDetail.meta.topic]',
-                default: 'icons.blender.predictDefault',
-                vip: {
-                  template: 'icons.blender.vip[reportDetail.meta.topic]',
-                  default: 'icons.blender.predictDefault',
-                },
-              },
-            },
-          ],
+          fields: [{ field: 'image', variable: 'reportDetail.image' }],
         },
       },
       {
@@ -146,7 +124,7 @@ export const defaultPredictReportTemplate = {
             {
               field: 'content',
               ai: {
-                template: '20231102124702-h44hG0',
+                template: 'report/predict-houses',
                 parameters: [
                   { field: 'topic', variable: 'reportDetail.title' },
                   { field: 'date', variable: 'report.meta.date' },
@@ -193,7 +171,7 @@ export const defaultPredictReportTemplate = {
             {
               field: 'content',
               ai: {
-                template: '20231102124739-GVcACb',
+                template: 'report/predict-strengths',
                 parameters: [
                   { field: 'topic', variable: 'reportDetail.title' },
                   { field: 'date', variable: 'report.meta.date' },
@@ -221,7 +199,7 @@ export const defaultPredictReportTemplate = {
             {
               field: 'content',
               ai: {
-                template: '20231102124815-uKn670',
+                template: 'report/predict-challenges',
                 parameters: [
                   { field: 'topic', variable: 'reportDetail.title' },
                   { field: 'date', variable: 'report.meta.date' },
@@ -244,7 +222,7 @@ export const defaultNatalReportTemplate = {
       {
         field: 'title',
         ai: {
-          template: '20231102124904-yeCsm3',
+          template: 'report/natal-title',
           parameters: [
             { field: 'stars', variable: 'user.horoscope.starsJsonString' },
             { field: 'birthDate', variable: 'user.birthDate' },
@@ -259,13 +237,7 @@ export const defaultNatalReportTemplate = {
           iterator: 'report.sections',
           fields: [
             { field: 'icon', variable: '$item.icon' },
-            {
-              field: 'image',
-              blender: {
-                template: 'icons.blender[$item.sign]',
-                vip: { template: 'icons.blender.vip[$item.sign]' },
-              },
-            },
+            { field: 'image', variable: '$item.image' },
             { field: 'iconTitle', variable: '$item.iconTitle' },
             { field: 'title', variable: '$item.title' },
             { field: 'topic', variable: '$item.topic' },
@@ -273,7 +245,7 @@ export const defaultNatalReportTemplate = {
             {
               field: 'content',
               ai: {
-                template: '20231102125036-AioDuk',
+                template: 'report/natal-description',
                 parameters: [
                   { field: 'stars', variable: 'user.horoscope.starsJsonString' },
                   { field: 'topic', variable: '$item.topic' },
@@ -310,7 +282,7 @@ export const defaultNatalReportTemplate = {
             {
               field: 'content',
               ai: {
-                template: '20231102125036-AioDuk',
+                template: 'report/natal-description',
                 parameters: [
                   { field: 'stars', variable: 'user.horoscope.starsJsonString' },
                   { field: 'topic', variable: 'reportDetail.meta.topic' },
@@ -331,15 +303,7 @@ export const defaultNatalReportTemplate = {
         contentColor: '',
         titleColor: '',
         _runtime: {
-          fields: [
-            {
-              field: 'image',
-              blender: {
-                template: 'icons.blender[reportDetail.sign]',
-                vip: { template: 'icons.blender.vip[reportDetail.sign]' },
-              },
-            },
-          ],
+          fields: [{ field: 'image', variable: 'reportDetail.image' }],
         },
       },
       {
@@ -357,7 +321,7 @@ export const defaultNatalReportTemplate = {
             {
               field: 'content',
               ai: {
-                template: '20231102131101-iwDYZ2',
+                template: 'report/natal-description',
                 parameters: [
                   { field: 'stars', variable: 'user.horoscope.starsJsonString' },
                   { field: 'topic', variable: 'reportDetail.meta.topic' },
@@ -378,15 +342,7 @@ export const defaultNatalReportTemplate = {
         contentColor: '',
         titleColor: '',
         _runtime: {
-          fields: [
-            {
-              field: 'image',
-              blender: {
-                template: 'icons.blender[reportDetail.sign]',
-                vip: { template: 'icons.blender.vip[reportDetail.sign]' },
-              },
-            },
-          ],
+          fields: [{ field: 'image', variable: 'reportDetail.image' }],
         },
       },
       {
@@ -404,7 +360,7 @@ export const defaultNatalReportTemplate = {
             {
               field: 'content',
               ai: {
-                template: '20231102125524-sPm9QS',
+                template: 'report/natal-gift',
                 parameters: [
                   { field: 'stars', variable: 'user.horoscope.starsJsonString' },
                   { field: 'topic', variable: 'reportDetail.meta.topic' },
@@ -429,7 +385,7 @@ export const defaultNatalReportTemplate = {
             {
               field: 'content',
               ai: {
-                template: '20231102125915-EFcu5v',
+                template: 'report/natal-challenge',
                 parameters: [
                   { field: 'stars', variable: 'user.horoscope.starsJsonString' },
                   { field: 'topic', variable: 'reportDetail.meta.topic' },
