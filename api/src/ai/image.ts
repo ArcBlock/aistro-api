@@ -8,7 +8,7 @@ import { joinURL } from 'ufo';
 import env from '../libs/env';
 import logger from '../libs/logger';
 
-const DEFAULT_IMAGE_MODEL = 'openai/gpt-image-1';
+const DEFAULT_IMAGE_MODEL = 'google/gemini-2.5-flash-image';
 
 let imageModel: AIGNEHubImageModel;
 

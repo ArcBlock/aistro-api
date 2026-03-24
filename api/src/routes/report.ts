@@ -258,7 +258,7 @@ export const getReportInputSchema = Joi.object<GenerateReportInput>({
 router.post('/:type(predict|natal|synastry|phase)', user(), auth(), async (req, res) => {
   // NOTE: 有一个版本的客户端传过来的 `user.horoscope` 传错了（实际传了 dateHoroscope` 的数据），
   // 所以这里把错误的值去掉，自动重新计算
-  if (req.params.type === 'predict' && !req.body.dateHoroscope) {
+  if (req.params.type === 'predict' && !req.body.dateHoroscope && req.body.user) {
     req.body.user.horoscope = undefined;
   }
 

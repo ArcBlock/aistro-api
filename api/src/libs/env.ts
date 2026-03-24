@@ -10,6 +10,17 @@ export const { TEST_IOS_PURCHASE_RECEIPT } = process.env;
 
 export const isDevelopment = Config.env.mode === 'development';
 
+const EMPTY_BILLING = {
+  android: {
+    productId: '',
+    reportDetailProductId: undefined as string | undefined,
+    secret: '',
+    email: '',
+    packageName: '',
+  },
+  ios: { secret: '', bundleId: '', productIds: [] as string[], reportDetailProductId: undefined as string | undefined },
+};
+
 function parseBillingConfiguration(value: object) {
   const result = Joi.object<{
     android: { productId: string; reportDetailProductId?: string; secret: string; email: string; packageName: string };
@@ -30,7 +41,10 @@ function parseBillingConfiguration(value: object) {
     }).required(),
   }).validate(value, { stripUnknown: true });
 
-  if (result.error) throw new Error(`validate billing configuration error ${result.error.message}`);
+  if (result.error) {
+    logger.warn(`Billing configuration missing or invalid: ${result.error.message}, using empty defaults`);
+    return EMPTY_BILLING;
+  }
 
   return result.value;
 }

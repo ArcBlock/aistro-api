@@ -9,7 +9,7 @@ export default defineConfig(() => {
   return {
     plugins: [react(), createBlockletPlugin({ disableNodePolyfills: false }), svgr()],
     optimizeDeps: {
-      exclude: ['eth-lib'],
+      include: ['eth-lib'],
     },
     resolve: {
       dedupe: ['react', 'react-dom', '@mui/material'],
