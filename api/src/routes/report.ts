@@ -18,6 +18,7 @@ import { randomNatalImage, randomPredictImage, randomSynastryImage } from '../li
 import { componentIds } from '../libs/constants';
 import env, { Runtime, config } from '../libs/env';
 import { ErrorCodes } from '../libs/error';
+import type { Star } from '../libs/horoscope';
 import getHoroscope, {
   BIRTH_DATE_SCHEMA,
   BIRTH_PLACE_SCHEMA,
@@ -1238,8 +1239,8 @@ class Context {
       sign,
       get image() {
         if (report.type === 'predict') return randomPredictImage(false, $item?.topic);
-        if (report.type === 'natal') return randomNatalImage(false, sign);
-        if (report.type === 'synastry') return randomSynastryImage(false, $item?.topic);
+        if (report.type === 'natal') return sign ? randomNatalImage(false, sign) : undefined;
+        if (report.type === 'synastry') return randomSynastryImage(false, $item?.topic as Star);
         return undefined;
       },
     };
@@ -1351,8 +1352,8 @@ class Context {
       get image() {
         const sign = report.meta.user.horoscope.stars.find((s: any) => s.star === reportDetail.meta.topic)?.sign;
         if (report.type === 'predict') return randomPredictImage(false, reportDetail.meta.topic);
-        if (report.type === 'natal') return randomNatalImage(false, sign);
-        if (report.type === 'synastry') return randomSynastryImage(false, reportDetail.meta.topic);
+        if (report.type === 'natal') return sign ? randomNatalImage(false, sign) : undefined;
+        if (report.type === 'synastry') return randomSynastryImage(false, reportDetail.meta.topic as Star);
         return undefined;
       },
       get icon() {

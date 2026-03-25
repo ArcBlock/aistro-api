@@ -19,6 +19,8 @@ files:
   - dist
   - logo.png
   - screenshots
+  - api/dist/store/migrations/*.js
+  - prompts
 interfaces:
   - type: web
     name: publicUrl
@@ -42,7 +44,7 @@ requirements:
   aigne: true
 scripts:
   dev: npm run start
-  pre-start: npx tsx api/src/hooks/pre-start.ts
+  pre-start: node api/dist/hooks/pre-start.js
 environments:
   - name: CHAIN_HOST
     description: Chain host URL

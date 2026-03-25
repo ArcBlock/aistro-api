@@ -8,7 +8,7 @@ import Joi from 'joi';
 import path from 'path';
 
 import { HttpError } from './libs/auth';
-import { warmUp as warmUpImageCache } from './libs/image-cache';
+import startBlogCron from './libs/cron-blog';
 import logger, { accessLogMiddleware } from './libs/logger';
 import routes from './routes';
 import routesV2 from './routes/v2';
@@ -60,6 +60,5 @@ export const server = app.listen(port, (err?: any) => {
   if (err) throw err;
   logger.info(`> ${name} v${version} ready on ${port}`);
 
-  // Warm up AI image cache in the background (does not block startup)
-  warmUpImageCache().catch((e) => logger.error('Image cache warm-up failed', e));
+  startBlogCron();
 });

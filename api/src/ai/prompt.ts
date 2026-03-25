@@ -1,7 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const PROMPT_DIR = join(__dirname, '../prompts');
+const PROMPT_DIR = process.env.BLOCKLET_APP_DIR
+  ? join(process.env.BLOCKLET_APP_DIR, 'prompts')
+  : join(__dirname, '../prompts');
 const cache = new Map<string, string>();
 
 /**

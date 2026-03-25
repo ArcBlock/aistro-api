@@ -1,0 +1,97 @@
+{
+  "form": {
+    "labelCol": 6,
+    "wrapperCol": 12
+  },
+  "schema": {
+    "type": "object",
+    "properties": {
+      "tabs": {
+        "type": "void",
+        "x-component": "FormTab",
+        "x-component-props": {},
+        "x-index": 0,
+        "properties": {
+          "tab_auth": {
+            "type": "void",
+            "x-component": "FormTab.TabPane",
+            "x-component-props": {
+              "tab": "Auth"
+            },
+            "x-index": 0,
+            "properties": {
+              "auth_layout": {
+                "type": "void",
+                "x-component": "FormLayout",
+                "x-component-props": {
+                  "labelCol": 6,
+                  "wrapperCol": 18,
+                  "layout": "horizontal"
+                },
+                "x-index": 0,
+                "properties": {
+                  "auth_google_clientId": {
+                    "type": "string",
+                    "title": "Google Client Id",
+                    "x-decorator": "FormItem",
+                    "x-component": "Input",
+                    "x-validator": [],
+                    "x-component-props": {},
+                    "x-decorator-props": {},
+                    "name": "auth_google_clientId",
+                    "x-index": 0
+                  },
+                  "auth_apple_clientId": {
+                    "type": "string",
+                    "title": "Apple Client Id",
+                    "x-decorator": "FormItem",
+                    "x-component": "Input",
+                    "x-validator": [],
+                    "x-component-props": {},
+                    "x-decorator-props": {},
+                    "name": "auth_apple_clientId",
+                    "x-index": 1
+                  }
+                }
+              }
+            }
+          },
+          "tab_points": {
+            "type": "void",
+            "x-component": "FormTab.TabPane",
+            "x-component-props": {
+              "tab": "Points"
+            },
+            "x-index": 1,
+            "properties": {
+              "points_layout": {
+                "type": "void",
+                "x-component": "FormLayout",
+                "x-component-props": {
+                  "layout": "vertical"
+                },
+                "x-index": 0,
+                "properties": {
+                  "points": {
+                    "type": "string",
+                    "title": "Points",
+                    "x-decorator": "FormItem",
+                    "x-component": "Input.TextArea",
+                    "x-validator": [],
+                    "x-component-props": {
+                      "autoSize": true
+                    },
+                    "x-decorator-props": {},
+                    "name": "points",
+                    "description": "JSON string, see docs/points-configuration.md for details",
+                    "x-index": 0
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -149,6 +149,9 @@ function parseNotificationConfiguration(value: object) {
       autoGenerate: boolean;
       queueConcurrency: number;
     };
+    blog: {
+      enable: boolean;
+    };
   }>({
     sns: Joi.object({
       region: Joi.string(),
@@ -165,6 +168,9 @@ function parseNotificationConfiguration(value: object) {
       runAtHourOfDay: Joi.number().integer().min(0).max(23).default(8),
       autoGenerate: Joi.boolean().empty([null, '']).default(false),
       queueConcurrency: Joi.number().integer().min(0).default(10),
+    }),
+    blog: Joi.object({
+      enable: Joi.boolean().empty([null, '']).default(false),
     }),
   }).validate(value, { stripUnknown: true });
 
@@ -407,6 +413,9 @@ function parseConfigFromPreferences() {
           runAtHourOfDay: preferences.notification_predict_runAtHourOfDay || old?.todaysFortunes?.runAtHourOfDay,
           autoGenerate: preferences.notification_predict_autoGenerate,
           queueConcurrency: preferences.notification_predict_queueConcurrency,
+        },
+        blog: {
+          enable: preferences.notification_blog_enable,
         },
       });
       return this._notification;
