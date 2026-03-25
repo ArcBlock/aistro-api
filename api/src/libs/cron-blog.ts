@@ -35,6 +35,9 @@ export default function startBlogCron() {
     blogCronTask ??= cron.schedule('0 8 * * *', runBlogGeneration);
     blogCronTask.start();
     logger.info('Blog cron started (daily at 08:00)');
+
+    // On startup, check if any blog articles exist; if not, generate one immediately
+    checkAndSeedBlog().catch((error) => logger.error('Blog seed check failed', error));
   } else {
     blogCronTask?.stop();
   }
@@ -98,10 +101,46 @@ async function generateBlogForTopic(topic: (typeof BLOG_TOPICS)[number]) {
       translations,
       publishTime: new Date(),
       boardId: 'blog-default',
-      labels: [topic.label],
+      labels: topic.label,
       needReview: false,
     },
   });
 
-  return { id: (response as any).data?.id, slug: (response as any).data?.slug };
+  const { data } = response as any;
+  const id = data?.id;
+  const slug = data?.slug;
+
+  // Step 6: Set labels on the published blog
+  if (id) {
+    try {
+      await call({
+        name: componentIds.didComments,
+        path: `/api/call/blog/${id}/label`,
+        method: 'PUT',
+        data: { labels: [topic.label] },
+      });
+      logger.info(`Blog labels set for ${topic.label}: ${id}`);
+    } catch (error) {
+      logger.warn(`Failed to set labels for ${topic.label}, trying alternative API`, error);
+      // Try alternative: update blog with labels
+      try {
+        await call({
+          name: componentIds.didComments,
+          path: `/api/call/blog/${id}`,
+          method: 'PUT',
+          data: { labels: [topic.label] },
+        });
+        logger.info(`Blog labels set via update for ${topic.label}: ${id}`);
+      } catch (err) {
+        logger.error(`Failed to set labels for ${topic.label}`, err);
+      }
+    }
+  }
+
+  return { id, slug };
+}
+
+async function checkAndSeedBlog() {
+  logger.info('Blog seed check: triggering generation on startup');
+  await runBlogGeneration();
 }

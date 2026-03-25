@@ -28,16 +28,16 @@ function parseBillingConfiguration(value: object) {
     ios: { secret: string; bundleId: string; productIds: string[]; reportDetailProductId?: string };
   }>({
     android: Joi.object({
-      productId: Joi.string().required(),
-      secret: Joi.string().required(),
-      email: Joi.string().required(),
-      packageName: Joi.string().required(),
+      productId: Joi.string().empty([null, '']).default(''),
+      secret: Joi.string().empty([null, '']).default(''),
+      email: Joi.string().empty([null, '']).default(''),
+      packageName: Joi.string().empty([null, '']).default(''),
       reportDetailProductId: Joi.string().empty([null, '']),
     }).required(),
     ios: Joi.object({
-      secret: Joi.string().required(),
-      bundleId: Joi.string().required(),
-      productIds: Joi.array().items(Joi.string()).required(),
+      secret: Joi.string().empty([null, '']).default(''),
+      bundleId: Joi.string().empty([null, '']).default(''),
+      productIds: Joi.array().items(Joi.string()).default([]),
       reportDetailProductId: Joi.string().empty([null, '']),
     }).required(),
   }).validate(value, { stripUnknown: true });
@@ -543,7 +543,9 @@ function parseConfigFromPreferences() {
 
     _points: undefined as ReturnType<typeof parsePointsConfiguration> | undefined,
     get points() {
-      this._points ??= parsePointsConfiguration(tryParse(preferences.points) || {});
+      this._points ??= parsePointsConfiguration(
+        typeof preferences.points === 'string' ? tryParse(preferences.points) || {} : preferences.points || {},
+      );
       return this._points;
     },
   };

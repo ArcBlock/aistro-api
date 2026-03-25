@@ -1,12 +1,14 @@
 import { getComponentMountPoint } from '@blocklet/sdk/lib/component';
 import { Router } from 'express';
 
+import { componentIds } from '../libs/constants';
 import env, { config, configFile } from '../libs/env';
 import { ensureAdmin } from '../libs/security';
 
 const router = Router();
 
 const mountPoint = getComponentMountPoint('aistro');
+const pointUpMountPoint = getComponentMountPoint(componentIds.pointUp);
 
 router.get('/', async (_, res) => {
   res.json({
@@ -20,6 +22,7 @@ router.get('/', async (_, res) => {
     },
     chainHost: env.chainHost,
     mountPoint,
+    pointUpMountPoint,
     requireInvite: config.limitation.requireInvite,
     agents: configFile.config?.agents,
   });

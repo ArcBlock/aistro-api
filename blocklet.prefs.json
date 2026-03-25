@@ -56,13 +56,95 @@
               }
             }
           },
+          "tab_notification": {
+            "type": "void",
+            "x-component": "FormTab.TabPane",
+            "x-component-props": {
+              "tab": "Notification"
+            },
+            "x-index": 1,
+            "properties": {
+              "notification_layout": {
+                "type": "void",
+                "x-component": "FormLayout",
+                "x-component-props": {
+                  "labelCol": 6,
+                  "wrapperCol": 18,
+                  "layout": "horizontal"
+                },
+                "x-index": 0,
+                "properties": {
+                  "notification_blog_enable": {
+                    "type": "boolean",
+                    "title": "Blog Auto Generation",
+                    "x-decorator": "FormItem",
+                    "x-component": "Switch",
+                    "x-validator": [],
+                    "x-component-props": {},
+                    "x-decorator-props": {},
+                    "description": "Enable daily automatic blog article generation",
+                    "name": "notification_blog_enable",
+                    "x-index": 0
+                  },
+                  "notification_predict_enable": {
+                    "type": "boolean",
+                    "title": "Predict Report",
+                    "x-decorator": "FormItem",
+                    "x-component": "Switch",
+                    "x-validator": [],
+                    "x-component-props": {},
+                    "x-decorator-props": {},
+                    "description": "Enable daily predict report generation and push notification",
+                    "name": "notification_predict_enable",
+                    "x-index": 1
+                  },
+                  "notification_predict_runAtHourOfDay": {
+                    "type": "number",
+                    "title": "Predict Run Hour",
+                    "x-decorator": "FormItem",
+                    "x-component": "NumberPicker",
+                    "x-validator": [],
+                    "x-component-props": {},
+                    "x-decorator-props": {},
+                    "description": "Run predict at hour of day: 0 - 23",
+                    "name": "notification_predict_runAtHourOfDay",
+                    "x-index": 2
+                  },
+                  "notification_predict_autoGenerate": {
+                    "type": "boolean",
+                    "title": "Predict Auto Generate",
+                    "x-decorator": "FormItem",
+                    "x-component": "Switch",
+                    "x-validator": [],
+                    "x-component-props": {},
+                    "x-decorator-props": {},
+                    "description": "Auto generate predict report for VIP users",
+                    "name": "notification_predict_autoGenerate",
+                    "x-index": 3
+                  },
+                  "notification_predict_queueConcurrency": {
+                    "type": "number",
+                    "title": "Predict Queue Concurrency",
+                    "x-decorator": "FormItem",
+                    "x-component": "NumberPicker",
+                    "x-validator": [],
+                    "x-component-props": {},
+                    "x-decorator-props": {},
+                    "default": "10",
+                    "name": "notification_predict_queueConcurrency",
+                    "x-index": 4
+                  }
+                }
+              }
+            }
+          },
           "tab_points": {
             "type": "void",
             "x-component": "FormTab.TabPane",
             "x-component-props": {
               "tab": "Points"
             },
-            "x-index": 1,
+            "x-index": 2,
             "properties": {
               "points_layout": {
                 "type": "void",
@@ -85,6 +167,144 @@
                     "name": "points",
                     "description": "JSON string, see docs/points-configuration.md for details",
                     "x-index": 0
+                  }
+                }
+              }
+            }
+          },
+          "tab_billing": {
+            "type": "void",
+            "x-component": "FormTab.TabPane",
+            "x-component-props": {
+              "tab": "Billing"
+            },
+            "x-index": 3,
+            "properties": {
+              "billing_android_card": {
+                "type": "void",
+                "x-component": "Card",
+                "x-component-props": {
+                  "title": "Android"
+                },
+                "x-index": 0,
+                "properties": {
+                  "billing_android_layout": {
+                    "type": "void",
+                    "x-component": "FormLayout",
+                    "x-component-props": {
+                      "labelCol": 6,
+                      "wrapperCol": 18,
+                      "layout": "horizontal"
+                    },
+                    "x-index": 0,
+                    "properties": {
+                      "billing_android_productId": {
+                        "type": "string",
+                        "title": "Subscription Product Id",
+                        "x-decorator": "FormItem",
+                        "x-component": "Input",
+                        "x-validator": [],
+                        "x-component-props": {},
+                        "x-decorator-props": {},
+                        "name": "billing_android_productId",
+                        "x-index": 0
+                      },
+                      "billing_android_productId_reportDetail": {
+                        "type": "string",
+                        "title": "Report Detail Product Id",
+                        "x-decorator": "FormItem",
+                        "x-component": "Input",
+                        "x-validator": [],
+                        "x-component-props": {},
+                        "x-decorator-props": {},
+                        "name": "billing_android_productId_reportDetail",
+                        "x-index": 1
+                      },
+                      "billing_android_packageName": {
+                        "type": "string",
+                        "title": "Package Name",
+                        "x-decorator": "FormItem",
+                        "x-component": "Input",
+                        "x-validator": [],
+                        "x-component-props": {},
+                        "x-decorator-props": {},
+                        "name": "billing_android_packageName",
+                        "x-index": 2
+                      },
+                      "billing_android_email": {
+                        "type": "string",
+                        "title": "Email",
+                        "x-decorator": "FormItem",
+                        "x-component": "Input",
+                        "x-validator": [],
+                        "x-component-props": {},
+                        "x-decorator-props": {},
+                        "name": "billing_android_email",
+                        "x-index": 3
+                      }
+                    }
+                  }
+                }
+              },
+              "billing_ios_card": {
+                "type": "void",
+                "x-component": "Card",
+                "x-component-props": {
+                  "title": "iOS"
+                },
+                "x-index": 1,
+                "properties": {
+                  "billing_ios_layout": {
+                    "type": "void",
+                    "x-component": "FormLayout",
+                    "x-component-props": {
+                      "labelCol": 6,
+                      "wrapperCol": 18,
+                      "layout": "horizontal"
+                    },
+                    "x-index": 0,
+                    "properties": {
+                      "billing_ios_productIds": {
+                        "type": "string",
+                        "title": "Subscription Product Ids",
+                        "x-decorator": "FormItem",
+                        "x-component": "Input.TextArea",
+                        "x-validator": [],
+                        "x-component-props": {
+                          "autoSize": true,
+                          "showCount": false,
+                          "style": {
+                            "height": "inherit"
+                          }
+                        },
+                        "x-decorator-props": {},
+                        "name": "billing_ios_productIds",
+                        "description": "Product ids split by newline",
+                        "x-index": 0
+                      },
+                      "billing_ios_productId_reportDetail": {
+                        "type": "string",
+                        "title": "Report Detail Product Id",
+                        "x-decorator": "FormItem",
+                        "x-component": "Input",
+                        "x-validator": [],
+                        "x-component-props": {},
+                        "x-decorator-props": {},
+                        "name": "billing_ios_productId_reportDetail",
+                        "x-index": 1
+                      },
+                      "billing_ios_bundleId": {
+                        "type": "string",
+                        "title": "Bundle Id",
+                        "x-decorator": "FormItem",
+                        "x-component": "Input",
+                        "x-validator": [],
+                        "x-component-props": {},
+                        "x-decorator-props": {},
+                        "name": "billing_ios_bundleId",
+                        "x-index": 2
+                      }
+                    }
                   }
                 }
               }
