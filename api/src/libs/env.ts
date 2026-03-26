@@ -4,7 +4,11 @@ import { readFileSync, writeFileSync } from 'fs';
 import Joi from 'joi';
 import path from 'path';
 
-import { defaultNatalReportTemplate, defaultPredictReportTemplate } from './default-report-templates';
+import {
+  defaultNatalReportTemplate,
+  defaultPredictReportTemplate,
+  defaultSynastryReportTemplate,
+} from './default-report-templates';
 import logger from './logger';
 
 export const { TEST_IOS_PURCHASE_RECEIPT } = process.env;
@@ -503,11 +507,15 @@ function parseConfigFromPreferences() {
       return this._natalReportTemplate;
     },
 
-    _synastryReportTemplate: undefined as ReturnType<typeof parseReportTemplateConfiguration> | undefined | null,
+    _synastryReportTemplate: undefined as ReturnType<typeof parseReportTemplateConfiguration> | undefined,
     get synastryReportTemplate() {
-      if (this._synastryReportTemplate === undefined) {
-        const source = configFile.config?.synastryReportTemplate || preferences.synastryReportTemplate;
-        this._synastryReportTemplate = source ? parseReportTemplateConfiguration(source) : null;
+      if (!this._synastryReportTemplate) {
+        return (this._synastryReportTemplate =
+          (configFile.config?.synastryReportTemplate &&
+            parseReportTemplateConfiguration(configFile.config?.synastryReportTemplate)) ||
+          (preferences.synastryReportTemplate
+            ? parseReportTemplateConfiguration(preferences.synastryReportTemplate)
+            : parseReportTemplateConfiguration(defaultSynastryReportTemplate)));
       }
       return this._synastryReportTemplate;
     },

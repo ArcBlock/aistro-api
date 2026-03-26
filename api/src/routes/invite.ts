@@ -10,11 +10,13 @@ import { authService } from '../libs/auth';
 import { componentIds } from '../libs/constants';
 import { config } from '../libs/env';
 import getHoroscope, { getHoroscopeData } from '../libs/horoscope';
+import { parseLanguage } from '../libs/language';
 import logger from '../libs/logger';
 import { ensureAdmin } from '../libs/security';
 import Invite from '../store/models/invite';
 import InviteFriend from '../store/models/invite-friend';
 import User from '../store/models/user';
+import { generateReport } from './report';
 
 const router = Router();
 
@@ -223,15 +225,39 @@ const friendInviteBodySchema = Joi.object<{
 
 router.post('/friend-invite/complete/:id', async (req, res) => {
   const body = await friendInviteBodySchema.validateAsync(req.body, { stripUnknown: true });
-  const { friendBirthDate, friendBirthPlace, toUserId, fromUserId } = body;
+  const { friendBirthDate, friendBirthPlace, toUserId, fromUserId, lang } = body;
   const { id } = req.params;
   if (!id) throw new Error('Missing required params `id`');
   if (friendBirthPlace.latitude === 0 && friendBirthPlace.longitude === 0) {
     throw new Error('params `friendBirthPlace` in wrong validation');
   }
 
-  // reportId uses invite ID — content is generated on-demand when viewing
-  const reportId = `synastry-invite-${id}`;
+  const fromUser = await User.findByPk(fromUserId);
+
+  // Generate report now if inviter has birth info; otherwise defer to view time
+  let reportId: string;
+  if (fromUser?.birthDate && fromUser?.birthPlace && friendBirthDate && friendBirthPlace) {
+    const { report } = await generateReport({
+      userId: fromUserId,
+      language: parseLanguage(lang),
+      type: 'synastry' as const,
+      user: {
+        birthDate: fromUser.birthDate,
+        birthPlace: fromUser.birthPlace,
+        horoscope: getHoroscopeData(getHoroscope({ birthDate: fromUser.birthDate, birthPlace: fromUser.birthPlace })),
+      },
+      secondaryUser: {
+        birthDate: friendBirthDate,
+        birthPlace: friendBirthPlace,
+        horoscope: getHoroscopeData(getHoroscope({ birthDate: friendBirthDate, birthPlace: friendBirthPlace })),
+      },
+      inviteId: id,
+    });
+    reportId = report.id;
+  } else {
+    // Defer report creation — GET /report/:reportId will create it on first view
+    reportId = `synastry-invite-${id}`;
+  }
 
   await InviteFriend.update(
     {

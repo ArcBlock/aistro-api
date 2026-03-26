@@ -367,90 +367,112 @@ router.get('/:reportId', user(), async (req, res) => {
   }
 
   const authUser = (await authService.getUser(fromUserId)).user;
-
-  // Generate synastry report content on-demand using local AI
-  const fromUser = await User.findByPk(fromUserId, { rejectOnEmpty: new Error(`User not found ${fromUserId}`) });
   const language = parseLanguage((req.query.language as string) || 'en');
 
-  const userHoroscope = getHoroscopeData(
-    getHoroscope({ birthDate: fromUser.birthDate!, birthPlace: fromUser.birthPlace! }),
-  );
-  const friendHoroscope = getHoroscopeData(
-    getHoroscope({ birthDate: friendBirthDate!, birthPlace: friendBirthPlace! }),
-  );
-
-  const sections = await Promise.all(
-    SYNASTRY_STARS.map(async (star) => {
-      const star1 = userHoroscope.stars.find((s) => s.star === star);
-      const star2 = friendHoroscope.stars.find((s) => s.star === star);
-      if (!star1 || !star2) return undefined;
-
-      const key = `synastry-${star}-${star1.sign}-${star1.house}-${star2.sign}-${star2.house}`;
-
-      const { content } = await BuiltinAnswer.getOrGenerateReport({
-        key,
-        language,
-        generate: async ({ language: lang }) =>
-          invokeText('report/synastry-description', {
-            language: lang,
-            star,
-            userStars: getHoroscopeString([star1]),
-            secondaryUserStars: getHoroscopeString([star2]),
-          }).then((c) => ({ content: c })),
-        translate: async ({ content: c, language: lang }) => translate(c, lang),
-        summarize: async ({ content: c, language: lang }) => summarize(c, lang),
-      });
-
-      return {
-        star,
-        topic: star,
-        icon: get(config.reportIcons, `synastry.${star}`, ''),
-        iconTitle: await getTranslation(`synastry_${star}`, language, config.defaultLanguage).then((s: string) =>
-          s.toUpperCase(),
-        ),
-        title: `${star1.sign} - ${star2.sign}`,
-        content,
-        image: randomSynastryImage(false, star),
-        lock: false,
-        generateStatus: 'finished' as const,
-      };
-    }),
-  );
-
-  const title = await invokeText('report/synastry-title', {
-    language,
-    userStars: getHoroscopeString(userHoroscope.stars),
-    secondaryUserStars: getHoroscopeString(friendHoroscope.stars),
-  });
-
-  res.json({
-    id: reportId,
-    title,
-    user: {
-      name: authUser?.fullName,
-      avatar: getAvatarUrl(authUser?.avatar),
-    },
-    friend: {
-      name: inviteFriend?.friendName,
-      avatar: sample(config.avatars.pool),
-    },
-    parameters: {
+  // If reportId has no matching Report record (e.g. legacy synastry-invite-* format), create one now
+  let report = await Report.findByPk(reportId);
+  if (!report) {
+    const fromUser = await User.findByPk(fromUserId, {
+      rejectOnEmpty: new Error(`User not found ${fromUserId}`),
+    });
+    const userHoroscope = getHoroscopeData(
+      getHoroscope({ birthDate: fromUser.birthDate!, birthPlace: fromUser.birthPlace! }),
+    );
+    const friendHoroscope = getHoroscopeData(
+      getHoroscope({ birthDate: friendBirthDate!, birthPlace: friendBirthPlace! }),
+    );
+    const { report: newReport } = await generateReport({
       userId: fromUserId,
+      language,
+      type: 'synastry' as const,
       user: {
-        birthDate: fromUser.birthDate,
-        birthPlace: fromUser.birthPlace,
+        birthDate: fromUser.birthDate!,
+        birthPlace: fromUser.birthPlace!,
         horoscope: userHoroscope,
       },
       secondaryUser: {
-        birthDate: friendBirthDate,
-        birthPlace: friendBirthPlace,
+        birthDate: friendBirthDate!,
+        birthPlace: friendBirthPlace!,
         horoscope: friendHoroscope,
       },
+      inviteId: inviteFriend.id,
+    });
+    await InviteFriend.update({ reportId: newReport.id }, { where: { id: inviteFriend.id } });
+    report = newReport;
+  }
+
+  const input = await getReportInputSchema.validateAsync(
+    {
+      user: report.meta.user,
+      secondaryUser: (report.meta as any).secondaryUser,
+      language,
+      type: report.type,
     },
-    type: 13,
-    sections: sections.filter(Boolean),
-    generateStatus: 'finished',
+    { stripUnknown: true },
+  );
+
+  const {
+    context,
+    report: updatedReport,
+    details,
+    template,
+    isVip,
+    purchased,
+  } = await generateReport({
+    ...input,
+    userId: fromUserId,
+    language,
+    inviteId: inviteFriend.id,
   });
+
+  const detailMap = Object.fromEntries(details?.map((i) => [i.id, i]) ?? []);
+
+  const obj = await mergeResult(
+    context,
+    language,
+    template._runtime?.fields ?? [],
+    updatedReport.meta._runtime?.fields ?? [],
+    isVip,
+  );
+
+  res.json(
+    merge(
+      {
+        id: updatedReport.id,
+        error: updatedReport.error,
+        user: {
+          name: authUser?.fullName,
+          avatar: getAvatarUrl(authUser?.avatar),
+        },
+        friend: {
+          name: inviteFriend?.friendName,
+          avatar: sample(config.avatars.pool),
+        },
+        parameters: {
+          userId: fromUserId,
+          user: report.meta.user,
+          secondaryUser: (report.meta as any).secondaryUser,
+        },
+        type: 13,
+        sections: updatedReport.sections.map((i) => {
+          const detail = detailMap[i.id];
+          return {
+            id: i.id,
+            content: 'Generating...',
+            lock: (isVip ? false : isTopicLock(updatedReport.type, i.topic)) && !purchased[i.id],
+            purchased: purchased[i.id],
+            inapp: {
+              android: { productId: config.billing.android.reportDetailProductId },
+              ios: { productId: config.billing.ios.reportDetailProductId },
+            },
+            generateStatus: isVip && detail?.generateStatus !== 'finished' ? 'generating' : detail?.generateStatus,
+          };
+        }),
+        generateStatus: updatedReport.generateStatus,
+      },
+      obj,
+    ),
+  );
 });
 
 router.get('/:reportId/details/status', user(), auth(), async (req, res) => {

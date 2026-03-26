@@ -408,3 +408,96 @@ export const defaultNatalReportTemplate = {
     ],
   },
 };
+
+export const defaultSynastryReportTemplate = {
+  _runtime: {
+    fields: [
+      {
+        field: 'title',
+        ai: {
+          template: 'report/synastry-title',
+          parameters: [
+            { field: 'userStars', variable: 'user.horoscope.starsJsonString' },
+            { field: 'secondaryUserStars', variable: 'secondaryUser.horoscope.starsJsonString' },
+          ],
+        },
+      },
+      {
+        field: 'sections',
+        map: {
+          iterator: 'report.sections',
+          fields: [
+            { field: 'icon', variable: '$item.icon' },
+            { field: 'image', variable: '$item.image' },
+            { field: 'iconTitle', variable: '$item.iconTitle' },
+            { field: 'title', variable: '$item.title' },
+            { field: 'topic', variable: '$item.topic' },
+            {
+              field: 'content',
+              ai: {
+                template: 'report/synastry-description',
+                parameters: [
+                  { field: 'star', variable: '$item.topic' },
+                  { field: 'userStars', variable: 'user.horoscope.starsJsonString' },
+                  { field: 'secondaryUserStars', variable: 'secondaryUser.horoscope.starsJsonString' },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    ],
+  },
+  _details_: {
+    _runtime: {
+      fields: [
+        { field: 'icon', variable: 'reportDetail.icon' },
+        { field: 'iconTitle', variable: 'reportDetail.iconTitle' },
+        { field: 'title', variable: 'reportDetail.title' },
+        { field: 'subtitle', variable: 'reportDetail.subtitle' },
+      ],
+    },
+    sections: [
+      {
+        _id: '1',
+        type: 1,
+        content: '',
+        image: '',
+        inset: 'right',
+        sectionTitle: '',
+        sectionIcon: '',
+        contentColor: '',
+        titleColor: '',
+        _runtime: {
+          fields: [
+            {
+              field: 'content',
+              ai: {
+                template: 'report/synastry-description',
+                parameters: [
+                  { field: 'star', variable: 'reportDetail.meta.topic' },
+                  { field: 'userStars', variable: 'user.horoscope.starsJsonString' },
+                  { field: 'secondaryUserStars', variable: 'secondaryUser.horoscope.starsJsonString' },
+                ],
+              },
+            },
+          ],
+        },
+      },
+      {
+        _id: '2',
+        type: 1,
+        content: '',
+        image: '',
+        inset: 'middle',
+        sectionTitle: '',
+        sectionIcon: '',
+        contentColor: '',
+        titleColor: '',
+        _runtime: {
+          fields: [{ field: 'image', variable: 'reportDetail.image' }],
+        },
+      },
+    ],
+  },
+};
