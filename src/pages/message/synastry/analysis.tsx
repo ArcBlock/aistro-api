@@ -5,6 +5,16 @@ import CardItem from '../../../components/card-item';
 import Loading from '../../../components/loading';
 import { Detail } from '../../../libs/type';
 
+const planetSymbols: Record<string, string> = {
+  sun: '☉',
+  moon: '☽',
+  mercury: '☿',
+  venus: '♀',
+  mars: '♂',
+  jupiter: '♃',
+  saturn: '♄',
+};
+
 const Container = styled(Box)`
   margin: 24px 20px 0;
   overflow: hidden;
@@ -74,8 +84,17 @@ function Item({ item, index }: { item: Detail; index: number }) {
   return (
     <Card id={item.topic} mb="80px">
       <Box display="flex" alignItems="center">
-        <Box sx={{ width: 20, height: 20 }}>
-          <img src={item.icon} alt={item.iconTitle} />
+        <Box
+          sx={{
+            width: 24,
+            height: 24,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 22,
+            color: '#d4c9ff',
+          }}>
+          {planetSymbols[item.topic] || '★'}
         </Box>
 
         <Box className="star">{item.iconTitle}</Box>
