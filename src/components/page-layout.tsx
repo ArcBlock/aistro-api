@@ -2,11 +2,35 @@
 import Header from '@blocklet/ui-react/lib/Header';
 import styled from '@emotion/styled';
 import Box from '@mui/material/Box';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
+
+// Header from @blocklet/ui-react crashes when session context is not yet initialized (guest access).
+// Wrap it in a boundary so it doesn't take down the whole page.
+class HeaderBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  override componentDidCatch(_: Error, info: ErrorInfo) {
+    console.warn('Header render failed, hiding header:', info);
+  }
+
+  override render() {
+    return this.state.hasError ? null : this.props.children;
+  }
+}
 
 function Layout({ children, ...rest }: { children: any }) {
   return (
     <Root {...rest}>
-      <StyledHeader className="sticky" maxWidth={false} />
+      <HeaderBoundary>
+        <StyledHeader className="sticky" maxWidth={false} />
+      </HeaderBoundary>
 
       <Box className="body-inner">
         <Box className="main-inner">{children}</Box>

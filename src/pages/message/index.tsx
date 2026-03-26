@@ -1,5 +1,6 @@
 import { useLocaleContext } from '@arcblock/ux/lib/Locale/context';
 import Toast from '@arcblock/ux/lib/Toast';
+import styled from '@emotion/styled';
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
 import dayjs from 'dayjs';
@@ -9,7 +10,6 @@ import { useParams } from 'react-router-dom';
 import Center from '../../components/center';
 import ErrorPage from '../../components/error';
 import ForbiddenPage from '../../components/forbidden';
-import Layout from '../../components/page-layout';
 import { useSessionContext } from '../../contexts/session';
 import { bindInviteFriend, getErrorMessage, getInviteFriend, getMessage } from '../../libs/api';
 import { DataProps, InviteFriend, MessageType } from '../../libs/type';
@@ -87,10 +87,10 @@ function Message() {
         Toast.error(getErrorMessage(error));
       }
     };
-    if (session.user && invitedFriend?.id && !invitedFriend?.toUserId) {
+    if (session?.user && invitedFriend?.id && !invitedFriend?.toUserId) {
       bindFriendId(session.user?.did, invitedFriend.id);
     }
-  }, [session.user, messageId, invitedFriend]);
+  }, [session?.user, messageId, invitedFriend]);
 
   useEffect(() => {
     setState((r) => ({ ...r, loading: true }));
@@ -101,36 +101,36 @@ function Message() {
 
   if (state.loading) {
     return (
-      <Layout>
+      <Root>
         <Center>
           <CircularProgress />
         </Center>
-      </Layout>
+      </Root>
     );
   }
 
   if (state.error) {
     return (
-      <Layout>
+      <Root>
         <ErrorPage />
-      </Layout>
+      </Root>
     );
   }
 
   const data = state.value?.data;
   if (!data) {
     return (
-      <Layout>
+      <Root>
         <ErrorPage />
-      </Layout>
+      </Root>
     );
   }
 
   if (data.code && data.code === 403) {
     return (
-      <Layout>
+      <Root>
         <ForbiddenPage />
-      </Layout>
+      </Root>
     );
   }
 
@@ -146,19 +146,27 @@ function Message() {
   if (type) {
     const Component = Components[type] || ErrorPage;
     return (
-      <Layout>
+      <Root>
         <Box className="app">
           <Component data={{ ...data, invitedFriend }} messageId={messageId} onLoggedIn={() => {}} />
         </Box>
-      </Layout>
+      </Root>
     );
   }
 
   return (
-    <Layout>
+    <Root>
       <ErrorPage />
-    </Layout>
+    </Root>
   );
 }
+
+const Root = styled(Box)`
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: rgb(22, 21, 72);
+`;
 
 export default Message;

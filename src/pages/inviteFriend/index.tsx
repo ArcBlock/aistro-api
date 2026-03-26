@@ -23,11 +23,14 @@ import { useAsync } from 'react-use';
 import { joinURL } from 'ufo';
 
 import Footer from '../../components/footer';
-import Layout from '../../components/page-layout';
 import { useSessionContext } from '../../contexts/session';
 import { completeInvitation, getInvitation, getUserDetail } from '../../libs/invites';
 
-const Root = styled(Layout)`
+const Root = styled(Box)`
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   background-color: rgb(28, 28, 72);
   align-items: center;
   .container {
@@ -185,7 +188,7 @@ function InviteFriend() {
         // console.error(error);
       }
     };
-    if (session.user) {
+    if (session?.user) {
       fetchUserDetail();
     } else {
       // for test
@@ -193,12 +196,12 @@ function InviteFriend() {
       // setBirthTime(dayjs('1990-02-25 00:00:00'));
       // setFriendBirthDate(birthDate);
     }
-  }, [session.user]);
+  }, [session?.user]);
 
   const result = useAsync(() => getInvitation(id!), []);
 
   const handleLoginClick = () => {
-    session.login(() => {});
+    session?.login(() => {});
   };
 
   const handleLinkClick = () => {
@@ -355,7 +358,7 @@ function InviteFriend() {
                       setFriendBirthDate(formattedDate);
                     }
                   }}
-                  open={session.user}
+                  open={session?.user}
                   onOpen={() => {
                     if (isUserReady) {
                       setIsLoginDialogOpen(true);
@@ -392,7 +395,7 @@ function InviteFriend() {
                       setBirthTime(newValue);
                     }
                   }}
-                  open={session.user}
+                  open={session?.user}
                   onOpen={() => {
                     if (isUserReady) {
                       setIsLoginDialogOpen(true);
@@ -525,7 +528,7 @@ function InviteFriend() {
                   t('inviteFriend.synastryStart')
                 )}
               </Button>
-              {!session.user && (
+              {!session?.user && (
                 <Typography sx={{ textAlign: 'left', color: 'white' }}>
                   <Button
                     variant="text"

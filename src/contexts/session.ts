@@ -4,12 +4,12 @@ import { useContext } from 'react';
 const { SessionProvider, SessionContext, SessionConsumer, withSession } = createAuthServiceSessionContext();
 
 export function useSessionContext(): any {
-  return useContext(SessionContext);
+  return useContext(SessionContext) ?? {};
 }
 
 export { SessionProvider, SessionContext, SessionConsumer, withSession };
 
 export function useIsRole(...roles: string[]) {
   const { session } = useSessionContext();
-  return roles.includes(session.user?.role);
+  return roles.includes(session?.user?.role);
 }
