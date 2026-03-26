@@ -348,47 +348,6 @@ router.post('/:type(predict|natal|synastry|phase)', user(), auth(), async (req, 
   logger.debug('report time usage: after res.json', { userId });
 });
 
-const reportGenerateParams = async (reportId: string) => {
-  const tmpReport = await Report.findByPk(reportId, { rejectOnEmpty: new Error(`Report not found ${reportId}`) });
-  const { type } = tmpReport;
-  if (type === 'synastry') {
-    const inviteFriend = await InviteFriend.findOne({ where: { reportId } });
-
-    const { fromUserId, friendBirthDate, friendBirthPlace } = inviteFriend!;
-    const fromUser = await User.findByPk(fromUserId, {
-      rejectOnEmpty: new Error(`User not found ${fromUserId}`),
-    });
-    return {
-      userId: fromUserId,
-      user: {
-        birthDate: fromUser!.birthDate!,
-        birthPlace: fromUser!.birthPlace!,
-        horoscope: getHoroscopeData(
-          getHoroscope({ birthDate: fromUser!.birthDate!, birthPlace: fromUser!.birthPlace! }),
-        ),
-      },
-      secondaryUser: {
-        birthDate: friendBirthDate,
-        birthPlace: friendBirthPlace,
-        horoscope: getHoroscopeData(getHoroscope({ birthDate: friendBirthDate!, birthPlace: friendBirthPlace! })),
-      },
-    };
-  }
-  throw new Error('Not support report type');
-};
-
-// ---------------------------------------------------------------------------
-// isAIGNEReportId — inline helper (was in open-graph lib)
-// ---------------------------------------------------------------------------
-function isAIGNEReportId(
-  reportId: string,
-): { type: 'synastry' | 'natal' | 'predict'; userId: string; id: string; topic?: string } | undefined {
-  const m = reportId.match(/^(?<type>synastry|natal|predict)_(?<userId>[^_]+)_(?<id>[^_]+)(_(?<topic>\w+))?$/);
-  if (!m) return undefined;
-  const { type, userId, id, topic } = m.groups as any;
-  return { type, userId, id, topic };
-}
-
 router.get('/:reportId', user(), async (req, res) => {
   const { reportId } = req.params;
   if (!reportId) throw new Error('Missing required params `reportId`');
@@ -409,134 +368,89 @@ router.get('/:reportId', user(), async (req, res) => {
 
   const authUser = (await authService.getUser(fromUserId)).user;
 
-  const aigneReportId = isAIGNEReportId(reportId);
-  // 新版的报告 — in aistro-ai we regenerate the report locally rather than fetching from AIGNE memory
-  if (aigneReportId) {
-    const fromUser = await User.findByPk(fromUserId, { rejectOnEmpty: new Error(`User not found ${fromUserId}`) });
+  // Generate synastry report content on-demand using local AI
+  const fromUser = await User.findByPk(fromUserId, { rejectOnEmpty: new Error(`User not found ${fromUserId}`) });
+  const language = parseLanguage((req.query.language as string) || 'en');
 
-    // NOTE: AIGNE memory lookup removed in migration. Return basic structure.
-    res.json({
-      id: reportId,
-      user: {
-        name: authUser?.fullName,
-        avatar: getAvatarUrl(authUser?.avatar),
-      },
-      friend: {
-        name: inviteFriend?.friendName,
-        avatar: sample(config.avatars.pool),
-      },
-      parameters: {
-        userId: fromUserId,
-        user: {
-          birthDate: fromUser.birthDate,
-          birthPlace: fromUser.birthPlace,
-          horoscope: getHoroscopeData(
-            getHoroscope({ birthDate: fromUser.birthDate!, birthPlace: fromUser.birthPlace! }),
-          ),
-        },
-        secondaryUser: {
-          birthDate: friendBirthDate,
-          birthPlace: friendBirthPlace,
-          horoscope: getHoroscopeData(getHoroscope({ birthDate: friendBirthDate!, birthPlace: friendBirthPlace! })),
-        },
-      },
-      type: 13,
-    });
-    return;
-  }
-
-  const tmpReport = await Report.findByPk(reportId, { rejectOnEmpty: new Error(`Report not found ${reportId}`) });
-  const { type } = tmpReport;
-
-  const params = await reportGenerateParams(reportId)!;
-  const input = await getReportInputSchema.validateAsync(
-    {
-      ...params,
-      user: params.user,
-      language: req.query.language || req.body.language,
-      type,
-    },
-    { stripUnknown: true },
+  const userHoroscope = getHoroscopeData(
+    getHoroscope({ birthDate: fromUser.birthDate!, birthPlace: fromUser.birthPlace! }),
   );
-  const language = parseLanguage(input.language);
+  const friendHoroscope = getHoroscopeData(
+    getHoroscope({ birthDate: friendBirthDate!, birthPlace: friendBirthPlace! }),
+  );
 
-  const { context, report, details, template, isVip, purchased } = await generateReport({
-    ...input,
-    userId: fromUserId,
+  const sections = await Promise.all(
+    SYNASTRY_STARS.map(async (star) => {
+      const star1 = userHoroscope.stars.find((s) => s.star === star);
+      const star2 = friendHoroscope.stars.find((s) => s.star === star);
+      if (!star1 || !star2) return undefined;
+
+      const key = `synastry-${star}-${star1.sign}-${star1.house}-${star2.sign}-${star2.house}`;
+
+      const { content } = await BuiltinAnswer.getOrGenerateReport({
+        key,
+        language,
+        generate: async ({ language: lang }) =>
+          invokeText('report/synastry-description', {
+            language: lang,
+            star,
+            userStars: getHoroscopeString([star1]),
+            secondaryUserStars: getHoroscopeString([star2]),
+          }).then((c) => ({ content: c })),
+        translate: async ({ content: c, language: lang }) => translate(c, lang),
+        summarize: async ({ content: c, language: lang }) => summarize(c, lang),
+      });
+
+      return {
+        star,
+        topic: star,
+        icon: get(config.reportIcons, `synastry.${star}`, ''),
+        iconTitle: await getTranslation(`synastry_${star}`, language, config.defaultLanguage).then((s: string) =>
+          s.toUpperCase(),
+        ),
+        title: `${star1.sign} - ${star2.sign}`,
+        content,
+        image: randomSynastryImage(false, star),
+        lock: false,
+        generateStatus: 'finished' as const,
+      };
+    }),
+  );
+
+  const title = await invokeText('report/synastry-title', {
     language,
+    userStars: getHoroscopeString(userHoroscope.stars),
+    secondaryUserStars: getHoroscopeString(friendHoroscope.stars),
   });
 
-  const detailMap = Object.fromEntries(details?.map((i) => [i.id, i]) ?? []);
-
-  const obj = await mergeResult(
-    context,
-    language,
-    template._runtime?.fields ?? [],
-    report.meta._runtime?.fields ?? [],
-    isVip,
-  );
-
-  res.json(
-    merge(
-      {
-        id: report.id,
-        error: report.error,
-        user: {
-          name: authUser?.fullName,
-          avatar: getAvatarUrl(authUser?.avatar),
-        },
-        friend: {
-          name: inviteFriend?.friendName,
-          avatar: sample(config.avatars.pool),
-        },
-        parameters: params,
-        type: 13,
-        scores:
-          report.type === 'predict'
-            ? [
-                {
-                  icon: get(config.reportIcons, 'predict.powerIn'),
-                  title: await getTranslation('powerIn', language, config.defaultLanguage),
-                  topics: report.sections
-                    .filter((i) => getPredictScoreCategory(i.score).name === 'powerIn')
-                    .map((i) => ({ id: i.id, title: i.topic })),
-                },
-                {
-                  icon: get(config.reportIcons, 'predict.pressureIn'),
-                  title: await getTranslation('pressureIn', language, config.defaultLanguage),
-                  topics: report.sections
-                    .filter((i) => getPredictScoreCategory(i.score).name === 'pressureIn')
-                    .map((i) => ({ id: i.id, title: i.topic })),
-                },
-                {
-                  icon: get(config.reportIcons, 'predict.troubleIn'),
-                  title: await getTranslation('troubleIn', language, config.defaultLanguage),
-                  topics: report.sections
-                    .filter((i) => getPredictScoreCategory(i.score).name === 'troubleIn')
-                    .map((i) => ({ id: i.id, title: i.topic })),
-                },
-              ].filter((i) => i.topics.length > 0)
-            : undefined,
-        sections: report.sections.map((i) => {
-          const detail = detailMap[i.id];
-
-          return {
-            id: i.id,
-            content: 'Generating...',
-            lock: (isVip ? false : isTopicLock(report!.type, i.topic)) && !purchased[i.id],
-            purchased: purchased[i.id],
-            inapp: {
-              android: { productId: config.billing.android.reportDetailProductId },
-              ios: { productId: config.billing.ios.reportDetailProductId },
-            },
-            generateStatus: isVip && detail?.generateStatus !== 'finished' ? 'generating' : detail?.generateStatus,
-          };
-        }),
-        generateStatus: report.generateStatus,
+  res.json({
+    id: reportId,
+    title,
+    user: {
+      name: authUser?.fullName,
+      avatar: getAvatarUrl(authUser?.avatar),
+    },
+    friend: {
+      name: inviteFriend?.friendName,
+      avatar: sample(config.avatars.pool),
+    },
+    parameters: {
+      userId: fromUserId,
+      user: {
+        birthDate: fromUser.birthDate,
+        birthPlace: fromUser.birthPlace,
+        horoscope: userHoroscope,
       },
-      obj,
-    ),
-  );
+      secondaryUser: {
+        birthDate: friendBirthDate,
+        birthPlace: friendBirthPlace,
+        horoscope: friendHoroscope,
+      },
+    },
+    type: 13,
+    sections: sections.filter(Boolean),
+    generateStatus: 'finished',
+  });
 });
 
 router.get('/:reportId/details/status', user(), auth(), async (req, res) => {

@@ -6,11 +6,10 @@ import { pick } from 'lodash';
 import { customAlphabet } from 'nanoid';
 import { InferAttributes, Op, WhereOptions } from 'sequelize';
 
-import { invokeText } from '../ai/invoke';
 import { authService } from '../libs/auth';
 import { componentIds } from '../libs/constants';
 import { config } from '../libs/env';
-import getHoroscope, { getHoroscopeData, getHoroscopeString } from '../libs/horoscope';
+import getHoroscope, { getHoroscopeData } from '../libs/horoscope';
 import logger from '../libs/logger';
 import { ensureAdmin } from '../libs/security';
 import Invite from '../store/models/invite';
@@ -224,31 +223,14 @@ const friendInviteBodySchema = Joi.object<{
 
 router.post('/friend-invite/complete/:id', async (req, res) => {
   const body = await friendInviteBodySchema.validateAsync(req.body, { stripUnknown: true });
-  const { friendBirthDate, friendBirthPlace, toUserId, fromUserId, lang } = body;
+  const { friendBirthDate, friendBirthPlace, toUserId, fromUserId } = body;
   const { id } = req.params;
   if (!id) throw new Error('Missing required params `id`');
-  const fromUser = await User.findOne({ where: { id: fromUserId } });
   if (friendBirthPlace.latitude === 0 && friendBirthPlace.longitude === 0) {
     throw new Error('params `friendBirthPlace` in wrong validation');
   }
 
-  // Generate synastry report using local AI agent instead of old call(aigneRuntime)
-  const language = lang || 'en';
-
-  const userHoroscope = getHoroscopeData(
-    getHoroscope({ birthDate: fromUser!.birthDate!, birthPlace: fromUser!.birthPlace! }),
-  );
-  const friendHoroscope = getHoroscopeData(getHoroscope({ birthDate: friendBirthDate, birthPlace: friendBirthPlace }));
-
-  // Generate a basic synastry report content via local AI
-  await invokeText('report/synastry-description', {
-    language,
-    userStars: getHoroscopeString(userHoroscope.stars),
-    secondaryUserStars: getHoroscopeString(friendHoroscope.stars),
-    star: 'sun',
-  });
-
-  // Use a generated report ID based on the invite ID
+  // reportId uses invite ID — content is generated on-demand when viewing
   const reportId = `synastry-invite-${id}`;
 
   await InviteFriend.update(
