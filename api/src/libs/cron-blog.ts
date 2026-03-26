@@ -2,7 +2,9 @@ import { call } from '@blocklet/sdk/lib/component';
 import Config from '@blocklet/sdk/lib/config';
 import dayjs from 'dayjs';
 import cron, { type ScheduledTask } from 'node-cron';
+import { Op } from 'sequelize';
 
+import { generateImage } from '../ai/image';
 import { invokeText } from '../ai/invoke';
 import CronHistory from '../store/models/cron-history';
 import { componentIds } from './constants';
@@ -36,7 +38,6 @@ export default function startBlogCron() {
     blogCronTask.start();
     logger.info('Blog cron started (daily at 08:00)');
 
-    // On startup, check if any blog articles exist; if not, generate one immediately
     checkAndSeedBlog().catch((error) => logger.error('Blog seed check failed', error));
   } else {
     blogCronTask?.stop();
@@ -45,24 +46,25 @@ export default function startBlogCron() {
 
 async function runBlogGeneration() {
   logger.info('Blog generation started');
+  const date = dayjs().format('YYYY-MM-DD');
 
   for (const topic of BLOG_TOPICS) {
-    const date = dayjs().format('YYYY-MM-DD');
     const key = `Blog-${topic.label}-${date}`;
 
-    try {
-      const [, created] = await CronHistory.findOrCreate({ where: { key } });
-      if (!created) {
-        logger.info(`Blog for ${topic.label} already generated on ${date}, skipping`);
-        continue;
-      }
+    // Skip if already successfully generated today
+    const existing = await CronHistory.findOne({ where: { key } });
+    if (existing) {
+      logger.info(`Blog for ${topic.label} already generated on ${date}, skipping`);
+      continue;
+    }
 
+    try {
       const result = await generateBlogForTopic(topic);
-      await CronHistory.update({ result }, { where: { key } });
+      // Only write record after successful publish
+      await CronHistory.create({ key, result });
       logger.info(`Blog for ${topic.label} published successfully`, { id: result.id, slug: result.slug });
     } catch (error) {
       logger.error(`Blog generation failed for ${topic.label}`, error);
-      await CronHistory.update({ error: { message: (error as Error).message } }, { where: { key } }).catch(() => {});
     }
   }
 
@@ -78,7 +80,18 @@ async function generateBlogForTopic(topic: (typeof BLOG_TOPICS)[number]) {
   const zhContent = await invokeText('cron/blog-content', { title });
   logger.info(`Generated content for ${topic.label} (${zhContent.length} chars)`);
 
-  // Step 3: Translate to other languages in parallel
+  // Step 3: Generate cover image
+  let cover: string | undefined;
+  try {
+    const imageDesc = (await invokeText('cron/blog-image-desc', { content: zhContent })).trim();
+    logger.info(`Generated image description for ${topic.label}: ${imageDesc.slice(0, 80)}...`);
+    cover = await generateImage(imageDesc);
+    logger.info(`Generated cover image for ${topic.label}: ${cover}`);
+  } catch (error) {
+    logger.warn(`Cover image generation failed for ${topic.label}, publishing without cover`, error);
+  }
+
+  // Step 4: Translate to other languages in parallel
   const translated = await Promise.all(
     TARGET_LANGUAGES.map(async (lang) => {
       const [translatedTitle, translatedContent] = await Promise.all([
@@ -89,10 +102,10 @@ async function generateBlogForTopic(topic: (typeof BLOG_TOPICS)[number]) {
     }),
   );
 
-  // Step 4: Build translations array
+  // Step 5: Build translations array
   const translations = [{ title, content: zhContent, locale: 'zh' }, ...translated];
 
-  // Step 5: Publish to did-comments
+  // Step 6: Publish to did-comments
   const response = await call({
     name: componentIds.didComments,
     path: '/api/call/blog/publish',
@@ -101,6 +114,7 @@ async function generateBlogForTopic(topic: (typeof BLOG_TOPICS)[number]) {
       translations,
       publishTime: new Date(),
       boardId: 'blog-default',
+      cover,
       labels: topic.label,
       needReview: false,
     },
@@ -110,37 +124,24 @@ async function generateBlogForTopic(topic: (typeof BLOG_TOPICS)[number]) {
   const id = data?.id;
   const slug = data?.slug;
 
-  // Step 6: Set labels on the published blog
-  if (id) {
-    try {
-      await call({
-        name: componentIds.didComments,
-        path: `/api/call/blog/${id}/label`,
-        method: 'PUT',
-        data: { labels: [topic.label] },
-      });
-      logger.info(`Blog labels set for ${topic.label}: ${id}`);
-    } catch (error) {
-      logger.warn(`Failed to set labels for ${topic.label}, trying alternative API`, error);
-      // Try alternative: update blog with labels
-      try {
-        await call({
-          name: componentIds.didComments,
-          path: `/api/call/blog/${id}`,
-          method: 'PUT',
-          data: { labels: [topic.label] },
-        });
-        logger.info(`Blog labels set via update for ${topic.label}: ${id}`);
-      } catch (err) {
-        logger.error(`Failed to set labels for ${topic.label}`, err);
-      }
-    }
-  }
-
   return { id, slug };
 }
 
 async function checkAndSeedBlog() {
-  logger.info('Blog seed check: triggering generation on startup');
+  // Clean up records from previous failed runs (no successful result)
+  await CronHistory.destroy({
+    where: { key: { [Op.like]: 'Blog-%' }, result: { [Op.is]: null } },
+  });
+
+  const count = await CronHistory.count({
+    where: { key: { [Op.like]: 'Blog-%' } },
+  });
+
+  if (count > 0) {
+    logger.info(`Blog seed check: ${count} blog records found, skipping`);
+    return;
+  }
+
+  logger.info('Blog seed check: no blogs found, generating now');
   await runBlogGeneration();
 }
