@@ -7,6 +7,7 @@ import 'express-async-errors';
 import Joi from 'joi';
 import path from 'path';
 
+import { REPORT_IMAGES_DIR, REPORT_IMAGES_URL_PREFIX } from './ai/image';
 import { HttpError } from './libs/auth';
 import startBlogCron from './libs/cron-blog';
 import logger, { accessLogMiddleware } from './libs/logger';
@@ -29,6 +30,7 @@ app.use(accessLogMiddleware);
 const router = express.Router();
 router.use('/api', routes);
 router.use('/api/v2', routesV2);
+router.use(REPORT_IMAGES_URL_PREFIX, express.static(REPORT_IMAGES_DIR, { maxAge: '30d' }));
 app.use(router);
 
 const isProduction = process.env.NODE_ENV === 'production' || process.env.ABT_NODE_SERVICE_ENV === 'production';

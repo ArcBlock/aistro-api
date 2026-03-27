@@ -4,7 +4,7 @@ import { useContext } from 'react';
 const { SessionProvider, SessionContext, SessionConsumer, withSession } = createAuthServiceSessionContext();
 
 export function useSessionContext(): any {
-  return useContext(SessionContext) ?? {};
+  return useContext(SessionContext) ?? { session: {} };
 }
 
 export { SessionProvider, SessionContext, SessionConsumer, withSession };

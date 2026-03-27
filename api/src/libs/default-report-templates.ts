@@ -97,14 +97,8 @@ export const defaultPredictReportTemplate = {
       },
       {
         _id: '6',
-        type: 1,
-        content: '',
+        type: 3,
         image: '',
-        inset: 'middle',
-        sectionTitle: '',
-        sectionIcon: '',
-        contentColor: '',
-        titleColor: '',
         _runtime: {
           fields: [{ field: 'image', variable: 'reportDetail.image' }],
         },
@@ -294,14 +288,8 @@ export const defaultNatalReportTemplate = {
       },
       {
         _id: '2',
-        type: 1,
-        content: '',
+        type: 3,
         image: '',
-        inset: 'middle',
-        sectionTitle: '',
-        sectionIcon: '',
-        contentColor: '',
-        titleColor: '',
         _runtime: {
           fields: [{ field: 'image', variable: 'reportDetail.image' }],
         },
@@ -333,14 +321,8 @@ export const defaultNatalReportTemplate = {
       },
       {
         _id: '9',
-        type: 1,
-        content: '',
+        type: 3,
         image: '',
-        inset: 'middle',
-        sectionTitle: '',
-        sectionIcon: '',
-        contentColor: '',
-        titleColor: '',
         _runtime: {
           fields: [{ field: 'image', variable: 'reportDetail.image' }],
         },
@@ -486,16 +468,49 @@ export const defaultSynastryReportTemplate = {
       },
       {
         _id: '2',
-        type: 1,
-        content: '',
+        type: 3,
         image: '',
-        inset: 'middle',
-        sectionTitle: '',
-        sectionIcon: '',
-        contentColor: '',
-        titleColor: '',
         _runtime: {
           fields: [{ field: 'image', variable: 'reportDetail.image' }],
+        },
+      },
+    ],
+  },
+};
+
+export const defaultPhaseReportTemplate = {
+  _runtime: {
+    fields: [
+      { field: 'phase', variable: 'report.meta.phase' },
+      { field: 'phaseText', variable: 'report.meta.phase' },
+      {
+        field: 'phaseReport',
+        ai: {
+          template: 'report/moon-phase-summary',
+          parameters: [
+            { field: 'userStars', variable: 'user.horoscope.starsJsonString' },
+            { field: 'moonPhase', variable: 'report.meta.phase' },
+          ],
+        },
+      },
+      {
+        field: 'retrogrades',
+        map: {
+          iterator: 'report.meta.retrogradeStars',
+          fields: [
+            { field: 'star', variable: '$item.star' },
+            { field: 'title', variable: '$item.title' },
+            {
+              field: 'content',
+              ai: {
+                template: 'report/moon-phase-retrograde',
+                parameters: [
+                  { field: 'userStars', variable: 'user.horoscope.starsJsonString' },
+                  { field: 'planets', variable: '$item.star.$i18n' },
+                ],
+              },
+            },
+          ],
         },
       },
     ],

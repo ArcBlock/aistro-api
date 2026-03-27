@@ -18,6 +18,9 @@ const BLOG_TOPICS = [
   { type: '占星&AI', label: 'ai_llm' },
 ] as const;
 
+const BLOG_IMAGE_STYLE_SUFFIX =
+  'Style: minimal black outline drawing on a plain light gray-white background. Thin clean single-weight black ink lines only, like a coloring book page. No shading, no cross-hatching, no stippling, no filled areas, no gray tones. Decorated with simple small dots, tiny four-pointed stars, and thin curved arc lines. The entire image must contain ONLY black lines on a near-white (#F5F5F0) background. Absolutely NO color, NO purple, NO blue, NO gradients, NO watercolor, NO painted effects, NO 3D rendering, NO photorealism. Pure black and white line art only.';
+
 const TARGET_LANGUAGES = [
   { code: 'en', name: 'English' },
   { code: 'ja', name: 'Japanese' },
@@ -34,7 +37,7 @@ export default function startBlogCron() {
   }
 
   if (config.notification.blog.enable) {
-    blogCronTask ??= cron.schedule('0 8 * * *', runBlogGeneration);
+    blogCronTask ??= cron.schedule('0 8 * * *', () => runBlogGeneration());
     blogCronTask.start();
     logger.info('Blog cron started (daily at 08:00)');
 
@@ -44,24 +47,26 @@ export default function startBlogCron() {
   }
 }
 
-async function runBlogGeneration() {
-  logger.info('Blog generation started');
+export async function runBlogGeneration({ force = false } = {}) {
+  logger.info(`Blog generation started${force ? ' (force)' : ''}`);
   const date = dayjs().format('YYYY-MM-DD');
 
   for (const topic of BLOG_TOPICS) {
     const key = `Blog-${topic.label}-${date}`;
 
-    // Skip if already successfully generated today
-    const existing = await CronHistory.findOne({ where: { key } });
-    if (existing) {
-      logger.info(`Blog for ${topic.label} already generated on ${date}, skipping`);
-      continue;
+    // Skip if already successfully generated today (unless force)
+    if (!force) {
+      const existing = await CronHistory.findOne({ where: { key } });
+      if (existing) {
+        logger.info(`Blog for ${topic.label} already generated on ${date}, skipping`);
+        continue;
+      }
     }
 
     try {
       const result = await generateBlogForTopic(topic);
       // Only write record after successful publish
-      await CronHistory.create({ key, result });
+      await CronHistory.upsert({ key, result });
       logger.info(`Blog for ${topic.label} published successfully`, { id: result.id, slug: result.slug });
     } catch (error) {
       logger.error(`Blog generation failed for ${topic.label}`, error);
@@ -83,9 +88,10 @@ async function generateBlogForTopic(topic: (typeof BLOG_TOPICS)[number]) {
   // Step 3: Generate cover image
   let cover: string | undefined;
   try {
-    const imageDesc = (await invokeText('cron/blog-image-desc', { content: zhContent })).trim();
-    logger.info(`Generated image description for ${topic.label}: ${imageDesc.slice(0, 80)}...`);
-    cover = await generateImage(imageDesc);
+    const sceneDesc = (await invokeText('cron/blog-image-desc', { content: zhContent })).trim();
+    const imagePrompt = `${sceneDesc} ${BLOG_IMAGE_STYLE_SUFFIX}`;
+    logger.info(`Generated image prompt for ${topic.label}: ${sceneDesc}`);
+    cover = await generateImage(imagePrompt);
     logger.info(`Generated cover image for ${topic.label}: ${cover}`);
   } catch (error) {
     logger.warn(`Cover image generation failed for ${topic.label}, publishing without cover`, error);
@@ -133,15 +139,16 @@ async function checkAndSeedBlog() {
     where: { key: { [Op.like]: 'Blog-%' }, result: { [Op.is]: null } },
   });
 
-  const count = await CronHistory.count({
-    where: { key: { [Op.like]: 'Blog-%' } },
+  const date = dayjs().format('YYYY-MM-DD');
+  const todayCount = await CronHistory.count({
+    where: { key: { [Op.like]: `Blog-%-${date}` } },
   });
 
-  if (count > 0) {
-    logger.info(`Blog seed check: ${count} blog records found, skipping`);
+  if (todayCount > 0) {
+    logger.info(`Blog seed check: ${todayCount} blogs already generated today, skipping`);
     return;
   }
 
-  logger.info('Blog seed check: no blogs found, generating now');
+  logger.info('Blog seed check: no blogs today, generating now');
   await runBlogGeneration();
 }

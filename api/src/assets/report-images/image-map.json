@@ -1,0 +1,29 @@
+{
+  "predict": {
+    "love": ["predict/love-1.webp", "predict/love-2.webp"],
+    "creativity": ["predict/creativity-1.webp", "predict/creativity-2.webp"],
+    "career": ["predict/career-1.webp", "predict/career-2.webp"],
+    "wealth": ["predict/wealth-1.webp", "predict/wealth-2.webp"]
+  },
+  "natal": {
+    "sun": ["natal/sun-1.webp", "natal/sun-2.webp"],
+    "moon": ["natal/moon-1.webp", "natal/moon-2.webp"],
+    "ascendant": ["natal/ascendant-1.webp", "natal/ascendant-2.webp"],
+    "mercury": ["natal/mercury-1.webp", "natal/mercury-2.webp"],
+    "venus": ["natal/venus-1.webp", "natal/venus-2.webp"],
+    "mars": ["natal/mars-1.webp", "natal/mars-2.webp"],
+    "jupiter": ["natal/jupiter-1.webp", "natal/jupiter-2.webp"],
+    "saturn": ["natal/saturn-1.webp", "natal/saturn-2.webp"],
+    "uranus": ["natal/uranus-1.webp", "natal/uranus-2.webp"],
+    "neptune": ["natal/neptune-1.webp", "natal/neptune-2.webp"]
+  },
+  "synastry": {
+    "sun": ["synastry/sun-1.webp", "synastry/sun-2.webp"],
+    "moon": ["synastry/moon-1.webp", "synastry/moon-2.webp"],
+    "mercury": ["synastry/mercury-1.webp", "synastry/mercury-2.webp"],
+    "venus": ["synastry/venus-1.webp", "synastry/venus-2.webp"],
+    "mars": ["synastry/mars-1.webp", "synastry/mars-2.webp"],
+    "jupiter": ["synastry/jupiter-1.webp", "synastry/jupiter-2.webp"],
+    "saturn": ["synastry/saturn-1.webp", "synastry/saturn-2.webp"]
+  }
+}

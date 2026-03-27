@@ -6,6 +6,7 @@ import path from 'path';
 
 import {
   defaultNatalReportTemplate,
+  defaultPhaseReportTemplate,
   defaultPredictReportTemplate,
   defaultSynastryReportTemplate,
 } from './default-report-templates';
@@ -520,11 +521,15 @@ function parseConfigFromPreferences() {
       return this._synastryReportTemplate;
     },
 
-    _phaseReportTemplate: undefined as ReturnType<typeof parseReportTemplateConfiguration> | undefined | null,
+    _phaseReportTemplate: undefined as ReturnType<typeof parseReportTemplateConfiguration> | undefined,
     get phaseReportTemplate() {
-      if (this._phaseReportTemplate === undefined) {
-        const source = configFile.config?.phaseReportTemplate || preferences.phaseReportTemplate;
-        this._phaseReportTemplate = source ? parseReportTemplateConfiguration(source) : null;
+      if (!this._phaseReportTemplate) {
+        return (this._phaseReportTemplate =
+          (configFile.config?.phaseReportTemplate &&
+            parseReportTemplateConfiguration(configFile.config?.phaseReportTemplate)) ||
+          (preferences.phaseReportTemplate
+            ? parseReportTemplateConfiguration(preferences.phaseReportTemplate)
+            : parseReportTemplateConfiguration(defaultPhaseReportTemplate)));
       }
       return this._phaseReportTemplate;
     },

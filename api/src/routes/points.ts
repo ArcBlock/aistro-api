@@ -25,17 +25,24 @@ router.post('/action', user(), auth(), async (req, res) => {
   const action = config.points.actions[input.action];
   if (!action) throw new Error(`Unsupported action ${input.action}`);
 
-  const { data } = await call({
-    name: componentIds.pointUp,
-    path: '/api/add-point-cc',
-    method: 'POST',
-    data: {
-      ruleId: action.ruleId,
-      userDID: did,
-    },
-  });
+  try {
+    const { data } = await call({
+      name: componentIds.pointUp,
+      path: '/api/add-point-cc',
+      method: 'POST',
+      data: {
+        ruleId: action.ruleId,
+        userDID: did,
+      },
+    });
 
-  return res.json(data);
+    return res.json(data);
+  } catch (error: any) {
+    const status = error?.response?.status || error?.status || 500;
+    const message = error?.response?.data?.message || error?.message || 'Failed to add points';
+
+    return res.status(status).json({ error: message });
+  }
 });
 
 router.get('/status', user(), auth(), async (req, res) => {

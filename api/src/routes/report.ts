@@ -10,15 +10,14 @@ import Joi from 'joi';
 import { cloneDeep, differenceBy, get, isNil, merge, omit, pick, set } from 'lodash';
 import { Op } from 'sequelize';
 
+import { selectReportImage } from '../ai/image';
 import { invokeText } from '../ai/invoke';
 import { summarize, translate } from '../ai/utils';
 import { verifyPurchaseOfReport } from '../libs/app-receipt';
 import { authService } from '../libs/auth';
-import { randomNatalImage, randomPredictImage, randomSynastryImage } from '../libs/blender';
 import { componentIds } from '../libs/constants';
 import env, { Runtime, config } from '../libs/env';
 import { ErrorCodes } from '../libs/error';
-import type { Star } from '../libs/horoscope';
 import getHoroscope, {
   BIRTH_DATE_SCHEMA,
   BIRTH_PLACE_SCHEMA,
@@ -1174,10 +1173,7 @@ class Context {
       ...$item,
       sign,
       get image() {
-        if (report.type === 'predict') return randomPredictImage(false, $item?.topic);
-        if (report.type === 'natal') return sign ? randomNatalImage(false, sign) : undefined;
-        if (report.type === 'synastry') return randomSynastryImage(false, $item?.topic as Star);
-        return undefined;
+        return (report.sections as any[]).find((s) => s.topic === $item?.topic)?.image;
       },
     };
   }
@@ -1286,11 +1282,7 @@ class Context {
         return report.meta.user.horoscope.stars.find((s: any) => s.star === reportDetail.meta.topic)?.sign;
       },
       get image() {
-        const sign = report.meta.user.horoscope.stars.find((s: any) => s.star === reportDetail.meta.topic)?.sign;
-        if (report.type === 'predict') return randomPredictImage(false, reportDetail.meta.topic);
-        if (report.type === 'natal') return sign ? randomNatalImage(false, sign) : undefined;
-        if (report.type === 'synastry') return randomSynastryImage(false, reportDetail.meta.topic as Star);
-        return undefined;
+        return (report.sections as any[]).find((s) => s.topic === reportDetail.meta.topic)?.image;
       },
       get icon() {
         if (reportDetail.meta.type === 'predict') {
@@ -1459,8 +1451,20 @@ async function generateDetailIfNeeded({
         generateStatus: 'finished',
         error: undefined,
       });
-      // NOTE: sendPredictTopicNotification is not yet available in aistro-ai.
-      // SNS push notifications for report detail completion will be added later.
+
+      // Select pre-generated image for this report section
+      const sectionIndex = report.sections.findIndex((s: any) => s.id === reportDetail.id);
+      if (sectionIndex >= 0) {
+        const { topic } = reportDetail.meta;
+        const image = selectReportImage(report.type, topic);
+        if (image) {
+          await report.reload();
+          const updatedSections = report.sections.map((s: any, i: number) =>
+            i === sectionIndex ? { ...s, image } : s,
+          );
+          await report.update({ sections: updatedSections });
+        }
+      }
     })
     .catch(async (error) => {
       await reportDetail!.update({ generateStatus: 'error', error: error?.message });

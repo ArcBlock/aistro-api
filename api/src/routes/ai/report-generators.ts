@@ -1,9 +1,9 @@
 import dayjs from 'dayjs';
 import { random } from 'lodash';
 
+import { selectReportImage } from '../../ai/image';
 import { invokeText } from '../../ai/invoke';
 import { summarize, translate } from '../../ai/utils';
-import { randomNatalImage, randomPredictImage, randomSynastryImage } from '../../libs/blender';
 import { PredictTopics, Stars, getHoroscopeString } from '../../libs/horoscope';
 import type { Star } from '../../libs/horoscope';
 import type { HoroscopeStars } from '../../libs/types';
@@ -37,7 +37,8 @@ export const reportPartTotal = (type: MessageType) =>
 // ---------------------------------------------------------------------------
 
 export function generateNatalReport({
-  isVip,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  isVip: _isVip,
   language,
   horoscope,
   message,
@@ -70,13 +71,15 @@ export function generateNatalReport({
       summarize: async ({ content, language }) => summarize(content, language),
     });
 
+    const image = selectReportImage('natal', star);
+
     return {
       star,
       sign,
       house,
       content,
       summary,
-      image: randomNatalImage(isVip, sign),
+      image,
     };
   });
 
@@ -138,6 +141,8 @@ export function generateSynastryReport({
           summarize: async ({ content, language }) => summarize(content, language),
         });
 
+        const image = selectReportImage('synastry', star);
+
         return {
           star,
           sign: star1.sign,
@@ -146,7 +151,7 @@ export function generateSynastryReport({
           friendHouse: star2.house,
           content,
           summary,
-          image: randomSynastryImage(isVip, star),
+          image,
         };
       })();
     })
@@ -225,11 +230,13 @@ export function generatePredictReport({
         summarize: async ({ content, language }) => summarize(content, language),
       });
 
+      const image = selectReportImage('predict', topic);
+
       return {
         dimension: topic,
         content,
         summary,
-        image: randomPredictImage(isVip, topic),
+        image,
         score: score || PREDICT_SCORE_DEFAULT,
       };
     },

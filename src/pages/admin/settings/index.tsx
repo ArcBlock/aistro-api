@@ -1,18 +1,18 @@
 import Toast from '@arcblock/ux/lib/Toast';
-import Dashboard from '@blocklet/ui-react/lib/Dashboard';
 import { Editor, useMonaco } from '@monaco-editor/react';
 import { LoadingButton } from '@mui/lab';
-import { Box, Stack, Tab, Tabs, styled } from '@mui/material';
+import { Box, Stack, Tab, Tabs } from '@mui/material';
 import { useAsyncEffect, useLocalStorageState } from 'ahooks';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { getErrorMessage } from '../../../libs/api';
-import { getSettings, setSettings } from '../../../libs/settings';
+import { generateBlog, getSettings, setSettings } from '../../../libs/settings';
 
 export default function SettingsPage() {
   const [currentTab = 'agents', setCurrentTab] = useLocalStorageState<string>('aistro.admin.settings.currentTab');
   const [setting, setSetting] = useState<{ [key: string]: string }>({});
   const [loading, setLoading] = useState(false);
+  const [blogLoading, setBlogLoading] = useState(false);
 
   useAsyncEffect(async () => {
     setSetting(
@@ -21,6 +21,18 @@ export default function SettingsPage() {
       ),
     );
   }, []);
+
+  const handleGenerateBlog = async () => {
+    setBlogLoading(true);
+    try {
+      await generateBlog();
+      Toast.success('文章生成已触发，请稍后查看');
+    } catch (error) {
+      Toast.error(getErrorMessage(error));
+    } finally {
+      setBlogLoading(false);
+    }
+  };
 
   const save = async () => {
     setLoading(true);
@@ -55,15 +67,7 @@ export default function SettingsPage() {
   }, [monaco, themeName]);
 
   return (
-    <Root
-      // FIXME: remove following undefined props after issue https://github.com/ArcBlock/ux/issues/1136 solved
-      meta={undefined}
-      fallbackUrl={undefined}
-      invalidPathFallback={undefined}
-      headerAddons={undefined}
-      sessionManagerProps={undefined}
-      links={undefined}
-      showDomainWarningDialog={undefined}>
+    <Box sx={{ bgcolor: '#fff', p: 3 }}>
       <Stack direction="row" justifyContent="space-between">
         <Tabs value={currentTab} onChange={(_, tab) => setCurrentTab(tab)}>
           <Tab value="agents" label="Agents" />
@@ -75,9 +79,14 @@ export default function SettingsPage() {
           <Tab value="sessionChatGreetings" label="会话问候语" />
         </Tabs>
 
-        <LoadingButton loading={loading} onClick={save}>
-          保存
-        </LoadingButton>
+        <Stack direction="row" spacing={1}>
+          <LoadingButton loading={blogLoading} onClick={handleGenerateBlog} variant="outlined">
+            生成文章
+          </LoadingButton>
+          <LoadingButton loading={loading} onClick={save}>
+            保存
+          </LoadingButton>
+        </Stack>
       </Stack>
 
       <Box
@@ -98,23 +107,6 @@ export default function SettingsPage() {
         value={setting[currentTab] || ''}
         onChange={(value) => setSetting((v) => ({ ...v, [currentTab]: value || '' }))}
       />
-    </Root>
+    </Box>
   );
 }
-
-const Root = styled(Dashboard as React.FC<any>)`
-  background-color: #fff;
-  .header {
-    margin-top: 20px;
-    .MuiListItem-root {
-      border-left: 2px solid rgba(0, 0, 0, 0.87);
-      padding-top: 0 !important;
-      padding-bottom: 0 !important;
-      .MuiListItemText-secondary {
-        font-weight: bold;
-        font-size: 28px;
-        color: #333;
-      }
-    }
-  }
-`;
