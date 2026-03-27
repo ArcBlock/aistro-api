@@ -2,6 +2,7 @@ import { AIGNEHubImageModel } from '@aigne/aigne-hub';
 import path from 'path';
 
 import imageMap from '../assets/report-images/image-map.json';
+import env from '../libs/env';
 
 const IMAGE_MODEL = 'google/gemini-2.5-flash-image';
 
@@ -39,12 +40,12 @@ export const REPORT_IMAGES_URL_PREFIX = '/api/report-images';
 
 /**
  * Select a pre-generated report image by report type and topic/star.
- * Returns a URL path that can be used directly in <img src>, or undefined if no match.
+ * Returns a full absolute URL that works for both web and mobile clients.
  */
 export function selectReportImage(type: string, topic: string): string | undefined {
   const pool = (imageMap as Record<string, Record<string, string[]>>)[type];
   const images = pool?.[topic.toLowerCase()];
   if (!images?.length) return undefined;
   const file = images[Math.floor(Math.random() * images.length)];
-  return `${REPORT_IMAGES_URL_PREFIX}/${file}`;
+  return `${env.appUrl}${REPORT_IMAGES_URL_PREFIX}/${file}`;
 }
